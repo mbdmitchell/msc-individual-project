@@ -1,6 +1,7 @@
 import CFG
 import networkx as nx
 
+
 def _generate_multi_di_graph_from_edges(edges) -> nx.MultiDiGraph:
     """
     Parameters
@@ -22,7 +23,7 @@ def example_cfg_1() -> CFG:
 
 def example_cfg_2() -> CFG:
     """Return while CFG"""
-    g = _generate_multi_di_graph_from_edges([(1, 2), (2, 3), (2, 4), (3, 2)])
+    g = _generate_multi_di_graph_from_edges([(1, 2), (2, 4), (2, 3), (3, 2)])
     return CFG.CFG(graph=g)
 
 

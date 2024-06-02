@@ -1,7 +1,11 @@
+import os
+import random
 from enum import Enum
 from typing import Optional
 import networkx as nx
 import pickle
+
+from matplotlib import pyplot as plt
 
 class NodeType(Enum):
     def __repr__(self):
@@ -17,6 +21,7 @@ class GraphFormat(Enum):
     CFG = 0,
     NX_MULTI_DIGRAPH = 1,
     GRAPH_ML = 2
+    PNG = 3
 
 
 class CFG:
@@ -28,6 +33,12 @@ class CFG:
 
     # FILE HANDLING
 
+    def _save_image(cfg, filename: str):
+        plt.figure(figsize=(6, 6))
+        nx.draw(cfg.graph, with_labels=True, node_size=1000, font_size=20, font_weight='bold', font_color='white', arrowsize=40)
+        plt.savefig(filename)
+        plt.close()
+
     def save(self, filepath: str, fmt: GraphFormat = GraphFormat.CFG) -> None:
         """Saves the graph to a file in the specified format."""
         # TODO: Refactor?
@@ -38,6 +49,11 @@ class CFG:
         with open(filepath, 'wb') as file:
             pickle.dump(self.graph, file)
         """
+
+        directory = os.path.dirname(filepath)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
         if fmt == GraphFormat.GRAPH_ML:
             nx.write_graphml(self.graph, filepath)
         elif fmt == GraphFormat.CFG:
@@ -46,6 +62,8 @@ class CFG:
         elif fmt == GraphFormat.NX_MULTI_DIGRAPH:
             with open(filepath, 'wb') as file:
                 pickle.dump(self.graph, file)
+        elif fmt == GraphFormat.PNG:
+            self._save_image(filepath)
         else:
             raise ValueError('Unrecognised GraphFormat')
 
@@ -97,7 +115,7 @@ class CFG:
         return self.graph.nodes()
 
     def node_type(self, node: int):
-        no_of_children = len(self.children(node))
+        no_of_children = len(self.children(node))  # don't use self.out_edges as can has multiple edges to same node
         if no_of_children == 0:
             return NodeType.END
         elif no_of_children == 1:
@@ -108,21 +126,29 @@ class CFG:
             return NodeType.SWITCH
 
     @staticmethod
-    def root() -> int:
-        """Root node is given id 1."""
-        return 1
+    def is_start_node(node: int):
+        return node == 1
 
-    def parents(self, node: int) -> list[int]:
-        return self.graph.predecessors(node)
+    def is_end_node(self, node: int):
+        return len(self.graph.out_edges(node)) == 0
 
-    def children(self, node: int) -> list[int]:
-        return self.graph.successors(node)
+    def parents(self, node: int):
+        return list(self.graph.predecessors(node))
+
+    def children(self, node: int):
+        return list(self.graph.successors(node))
 
     def entry_notes(self) -> list[int]:
         return [node for node in self.nodes() if not self.parents(node)]
 
     def exit_nodes(self) -> list[int]:
         return [node for node in self.nodes() if not self.children(node) and self.parents(node)]
+
+    def ancestors(self, node: int):
+        return nx.ancestors(self.graph, node)
+
+    def descendants(self, node: int):
+        return nx.descendants(self.graph, node)
 
     # ... count ...
 
@@ -160,6 +186,7 @@ class CFG:
         Validates the control flow graph by checking
         - exactly one entry note
         - all nodes are reachable from the entry point.
+        - TODO: all nodes have path to an exit node
         """
         if len(self.entry_notes()) != 1:
             return False
@@ -168,6 +195,18 @@ class CFG:
         all_nodes_reachable: bool = all(nx.algorithms.has_path(self, entry_node, node) for node in self.nodes())
 
         return all_nodes_reachable
+
+    """def is_valid_input_directions(self, directions: list[int]) -> bool:
+        current_node = 1
+        
+        while current_node not in self.exit_nodes():
+            no_of_out_edges = len(self.out_edges(current_node))
+            if no_of_out_edges == 0:
+                current_node = self.children(current_node)[0]"""
+
+
+    def is_entry_or_exit_node(self, node: int) -> bool:
+        return CFG.is_start_node(node) or self.node_type(node) == NodeType.END
 
     # MANIPULATION
 
@@ -206,6 +245,14 @@ class CFG:
         """
         self.graph.add_nodes_from(nodes_to_add, **attr)
 
+    def add_children(self, children: list[int], node: int):
+        for child in children:
+            self.graph.add_edge(node, child)  # NB: automatically adds child node if not in graph
+
+    def add_edge(self, u: int, v: int, key=None, **attr):
+        """c.f. MultiDiGraph's add_edge()"""
+        return self.graph.add_edge(u, v, key, **attr)
+
     def remove_edge(self, u: int, v: int, key=None):
         """Remove an edge between u and v.
 
@@ -222,3 +269,64 @@ class CFG:
         (Excerpt from MultiDiGraph's docstring)
         """
         self.graph.remove_edge(u, v, key)
+
+    # GENERATORS
+
+    """
+    TODO: consider for generate_valid_cfg
+    YARPGen introduces the concept of generation policies [6] with the aim of increasing program diversity.
+    The main idea is to sample from different distributions when making decisions in the generator.
+
+    Additionally, YARPGen uses a technique known as parameter shuffling [6] where a random distribution is
+    used to seed the main distributions used for the generator’s decisions, before beginning the generation
+    process. This enables programs to have very different characteristics between executions of the generator.
+    """
+
+    @staticmethod
+    def generate_valid_cfg(seed: int = None) -> 'CFG':
+
+        from .cfg_generator \
+            import generate_random_tree, \
+            reduce_no_of_exit_nodes_to_n, \
+            add_back_edges, \
+            add_forward_edges, \
+            add_self_loops
+
+        # TODO: inform params w/ a seed
+
+        # TODO: change from tree -> directed acyclic graph
+        cfg = generate_random_tree(target_depth=3, max_children_per_node=3)
+        reduce_no_of_exit_nodes_to_n(cfg, 1)
+        add_back_edges(cfg, 3)
+        add_forward_edges(cfg, 3)
+        # todo: MISC. RANDOM EDGES & CROSS EDGES
+        add_self_loops(cfg, 1)
+
+        return cfg
+
+    def generate_valid_input_directions(self, max_length: int = 64) -> list[int]:
+
+        directions: list[int] = []
+
+        current_node = 1  # starting node
+
+        while len(directions) < max_length:
+
+            # TODO: use edges, surely?
+
+            # print("current_node: {id}, type: {type}, {children}".format(id=current_node, type=self.node_type(current_node), children=self.children(current_node)))
+
+            if self.node_type(current_node) == NodeType.END:
+                break
+            elif self.node_type(current_node) == NodeType.UNCONDITIONAL:
+                current_node = self.children(current_node)[0]
+                # no choice made so no need to add to input path
+            else:
+                # TODO: but should I be choosing random EDGE as can be multiple out edges between two nodes?
+                random_child_index = random.randint(0, len(self.children(current_node))-1)
+                # print(random_child_index)
+                directions.append(random_child_index)
+                current_node = self.children(current_node)[random_child_index]
+
+        return directions
+
