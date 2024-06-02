@@ -43,11 +43,16 @@ class CFG:
         """Saves the graph to a file in the specified format."""
         # TODO: Refactor?
         """
-        if fmt not in {GraphFormat.NX_MULTI_DIGRAPH, GraphFormat.GRAPH_ML, GraphFormat.CFG}:
+        if fmt not in {GraphFormat.NX_MULTI_DIGRAPH, GraphFormat.GRAPH_ML, GraphFormat.CFG, GraphFormat.PNG}:
             raise TypeError("Chosen GraphFormat not supported")
             
         with open(filepath, 'wb') as file:
-            pickle.dump(self.graph, file)
+            if fmt == GraphFormat.PNG:
+                self._save_image(filepath)
+            elif fmt == GraphFormat.CFG:
+                pickle.dump(self, file)
+            else:
+                pickle.dump(self.graph, file)
         """
 
         directory = os.path.dirname(filepath)
