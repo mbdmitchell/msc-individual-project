@@ -1,12 +1,12 @@
 from enum import Enum
-
-import WATProgramBuilder
 import subprocess
 import os
+
 
 class WebAssemblyFormat(Enum):
     WAT = 0,
     WASM = 1
+
 
 class WATProgram:
 
@@ -17,6 +17,10 @@ class WATProgram:
         Note: To ensure valid WATProgram, this constructor should only be called
         by WATProgramBuilder. Direct instantiation of WATProgram is not recommended.
         """
+        if not isinstance(program_builder, WATProgramBuilder):
+            raise TypeError("WRONG TYPE")
+        if not program_builder.is_built:
+            raise ValueError("The provided program builder has not completed building the program.")
         self.code = program_builder.code
         self.language = 'WAT'
 
@@ -32,7 +36,7 @@ class WATProgram:
         except FileNotFoundError:
             return False
 
-    def create_file(self, file_path: str, fmt: WebAssemblyFormat):
+    def save(self, file_path: str, fmt: WebAssemblyFormat):
         """
     Generates and manages WebAssembly files based on the specified format.
 
@@ -70,3 +74,6 @@ class WATProgram:
 
             if not wat_file_already_existed:
                 os.remove(wat_path)
+
+
+from .WATProgramBuilder import WATProgramBuilder

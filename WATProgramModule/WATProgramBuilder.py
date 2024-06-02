@@ -1,27 +1,29 @@
-from typing import List
 
-from WATProgram import *
-import CFG.CFG as CFG
+from CFG import CFG, GraphFormat, NodeType
 from textwrap import dedent, indent
 
 # TODO: decouple code formatting from code generation
 
 
 class WATProgramBuilder:
-    def __init__(self, cfg: CFG.CFG = None, filename: str = None):
+
+    is_built: bool = False
+    code: str = ''
+
+    def __init__(self, cfg: CFG = None, filename: str = None):
         """Construct WATProgramBuilder from CFG or file w/ serialised CFG"""
-        self.code: str = ''
 
         if cfg and filename:
             raise ValueError("Can't include both CFG and filename parameters")
         if cfg is None and filename is None:
-            self.cfg = CFG.CFG()
+            self.cfg = CFG()
         elif filename:
-            self.cfg.load(filename, CFG.GraphFormat.CFG)
+            self.cfg = self.cfg = CFG().load(filename, GraphFormat.CFG)
         else:
             self.cfg = cfg
 
-    def _start_of_program(self) -> 'WATProgramBuilder':
+    # TODO: re-add ```-> 'WATProgramBuilder'```
+    def _start_of_program(self):
         """
         Adds the initial boilerplate and setup code for the WebAssembly Text (WAT) program.
 
@@ -81,7 +83,7 @@ class WATProgramBuilder:
             ''')
         return self
 
-    def _end_of_program(self) -> 'WATProgramBuilder':
+    def _end_of_program(self):
         """
         Adds the closing structure for the WebAssembly Text (WAT) program.
 
@@ -100,7 +102,7 @@ class WATProgramBuilder:
         """Generates a label comment for a given node."""
         return '\n\n\t\t\t\t;; NODE %{id}'.format(id=node)
 
-    def _start_of_node(self, node: int) -> 'WATProgramBuilder':
+    def _start_of_node(self, node: int):
         """Starts the code block for a specific node in the WebAssembly Text (WAT) program."""
         self.code += self._node_label(node)
         self.code += dedent('''\n\t\
@@ -115,28 +117,28 @@ class WATProgramBuilder:
                     )''').format(id=node)
         return self
 
-    def _end_of_node(self) -> 'WATProgramBuilder':
+    def _end_of_node(self):
         """Ends the code block for a node in the WebAssembly Text (WAT) program."""
         self.code += '''\n\t\t\t\t\t(br $to_start)\n'''
         self.code += '\t\t\t\t))'
         return self
 
-    def _end_node_body(self) -> 'WATProgramBuilder':
+    def _end_node_body(self):
         """Appends code to set the WAT program's $state to 0, signifying an end node."""
         self.code += '''\n\t\t\t\t\t(local.set $state (i32.const 0))'''
         return self
 
-    def _unconditional_node_body(self, node: int) -> 'WATProgramBuilder':
+    def _unconditional_node_body(self, node: int):
         """Appends code to unconditionally set the state to the successor node."""
-        if self.cfg.node_type(node) != CFG.NodeType.UNCONDITIONAL:
+        if self.cfg.node_type(node) != NodeType.UNCONDITIONAL:
             raise ValueError('Expected different node type')
         opt = self.cfg.children(node)[0]
         self.code += '''\n\t\t\t\t\t(local.set $state (i32.const {id}))'''.format(id=opt)
         return self
 
-    def _conditional_node_body(self, node: int) -> 'WATProgramBuilder':
+    def _conditional_node_body(self, node: int):
         """Appends code to set the state to a successor node, depending on the WAT code's $control_val variable."""
-        if self.cfg.node_type(node) != CFG.NodeType.CONDITIONAL:
+        if self.cfg.node_type(node) != NodeType.CONDITIONAL:
             raise ValueError('Expected different node type')
         opt1, opt2 = self.cfg.children(node)[0], self.cfg.children(node)[1]
         self.code += '''
@@ -157,7 +159,7 @@ class WATProgramBuilder:
 
     def _switch_node_body(self, node: int):
         """Appends code to set the state to a successor node, depending on the WAT code's $control_val variable."""
-        if self.cfg.node_type(node) != CFG.NodeType.SWITCH:
+        if self.cfg.node_type(node) != NodeType.SWITCH:
             raise ValueError('Expected different node type')
         self.code += indent(dedent('''
             (local.set $control_val 
@@ -174,56 +176,56 @@ class WATProgramBuilder:
         '''.format(ix=index, id=node)), '\t\t\t\t\t')
         return self
 
-    def add_node(self, node: int, **attr) -> 'WATProgramBuilder':
+    def add_node(self, node: int, **attr):
         """Adds a node to the list of nodes."""
         self.cfg.add_node(node, **attr)
         return self
 
-    def add_nodes(self, nodes: List[int], **attr) -> 'WATProgramBuilder':
+    def add_nodes(self, nodes: list[int], **attr):
         """Adds nodes to the list of nodes."""
         self.cfg.add_nodes(nodes, **attr)
         return self
 
-    def _add_node_code(self, node: int) -> 'WATProgramBuilder':
+    def _add_node_code(self, node: int):
         """Adds the appropriate code for a node based on its type."""
 
-        node_type: CFG.NodeType = self.cfg.node_type(node)
+        node_type: NodeType = self.cfg.node_type(node)
 
-        if node_type == CFG.NodeType.CONDITIONAL:
+        if node_type == NodeType.CONDITIONAL:
             return self._conditional_node(node)
-        elif node_type == CFG.NodeType.SWITCH:
+        elif node_type == NodeType.SWITCH:
             return self._switch_node(node)
-        elif node_type == CFG.NodeType.UNCONDITIONAL:
+        elif node_type == NodeType.UNCONDITIONAL:
             return self._unconditional_node(node)
-        elif node_type == CFG.NodeType.END:
+        elif node_type == NodeType.END:
             return self._end_node(node)
         else:
             raise ValueError('Unrecognised NodeType')
 
     def _unconditional_node(self, node: int):
         """Generates code for an unconditional node."""
-        assert self.cfg.node_type(node) == CFG.NodeType.UNCONDITIONAL  # Redundant if coming from add_node_code(node)
+        assert self.cfg.node_type(node) == NodeType.UNCONDITIONAL  # Redundant if coming from add_node_code(node)
         return (self._start_of_node(node)
                 ._unconditional_node_body(node)
                 ._end_of_node())
 
     def _conditional_node(self, node: int):
         """Generates code for a conditional node."""
-        assert self.cfg.node_type(node) == CFG.NodeType.CONDITIONAL  # Redundant if coming from add_node_code(node)
+        assert self.cfg.node_type(node) == NodeType.CONDITIONAL  # Redundant if coming from add_node_code(node)
         return (self._start_of_node(node)
                 ._conditional_node_body(node)
                 ._end_of_node())
 
     def _switch_node(self, node: int):  # Redundant if coming from add_node_code(node)
         """Generates code for a switch node."""
-        assert self.cfg.node_type(node) == CFG.NodeType.SWITCH
+        assert self.cfg.node_type(node) == NodeType.SWITCH
         return (self._start_of_node(node)
                 ._switch_node_body(node)
                 ._end_of_node())
 
     def _end_node(self, node: int):
         """Generates code for an end node."""
-        assert self.cfg.node_type(node) == CFG.NodeType.END  # Redundant if coming from add_node_code(node)
+        assert self.cfg.node_type(node) == NodeType.END  # Redundant if coming from add_node_code(node)
         return (self._start_of_node(node)
                 ._end_node_body()
                 ._end_of_node())
@@ -244,10 +246,9 @@ class WATProgramBuilder:
         if not has_starting_node:
             raise Exception('No node with id "n1" (default starting node id)')
 
-    def build(self) -> 'WATProgram':
+    def build(self):
         """Builds the WebAssembly Text (WAT) program."""
-
-        self.cfg.nodes().sort()
+        from .WATProgram import WATProgram  # Deferred import to avoid circular dependency
 
         self._validate()
 
@@ -256,5 +257,7 @@ class WATProgramBuilder:
         for node in self.cfg.nodes():
             self._add_node_code(node)
         self._end_of_program()
+
+        self.is_built = True
 
         return WATProgram(self)
