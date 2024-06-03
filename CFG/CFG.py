@@ -32,6 +32,31 @@ class CFG:
     from a specific graph implementation.
     """
 
+    def __init__(self, filepath: Optional[str] = None,
+                 graph: Optional[nx.MultiDiGraph] = None):
+        """filepath to pickle'd CFG obj"""
+
+        if graph and filepath:
+            raise ValueError("Don't include both a graph and filename in the parameters")
+
+        self.graph = nx.MultiDiGraph()
+
+        if graph:
+            self.graph = graph
+        elif filepath:
+            self.load(filepath)
+
+    def __eq__(self, other):
+        if not isinstance(other, CFG):
+            return False
+        if self.graph.nodes(data=True) != other.graph.nodes(data=True):
+            return False
+        if list(self.graph.edges(data=True)) != list(other.graph.edges(data=True)):
+            return False
+
+        return True
+
+
     # FILE HANDLING
 
     def _save_image(cfg, filename: str):
