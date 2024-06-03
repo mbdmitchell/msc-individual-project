@@ -186,21 +186,56 @@ class WATProgramBuilder:
         self.cfg.add_nodes(nodes, **attr)
         return self
 
-    def _add_node_code(self, node: int):
-        """Adds the appropriate code for a node based on its type."""
+    def _add_node_code(self, node: int, with_edge_aggregation: bool = False):
+        """Adds the appropriate code for a node based on its type. Performs edge aggregation if requested."""
+
+        def node_with_multiple_out_edges(node: int):
+            return (self._start_of_node(node)
+                    ._multi_outedge_node_body(node)
+                    ._end_of_node())
 
         node_type: NodeType = self.cfg.node_type(node)
 
-        if node_type == NodeType.CONDITIONAL:
-            return self._conditional_node(node)
-        elif node_type == NodeType.SWITCH:
-            return self._switch_node(node)
-        elif node_type == NodeType.UNCONDITIONAL:
-            return self._unconditional_node(node)
-        elif node_type == NodeType.END:
-            return self._end_node(node)
+        if with_edge_aggregation:
+
+            if node_type == NodeType.CONDITIONAL:
+                return self._conditional_node(node)
+            elif node_type == NodeType.SWITCH:
+                return self._switch_node(node)
+            elif node_type == NodeType.UNCONDITIONAL:
+                return self._unconditional_node(node)
+            elif node_type == NodeType.END:
+                return self._end_node(node)
+            else:
+                raise ValueError('Unrecognised NodeType')
+
         else:
-            raise ValueError('Unrecognised NodeType')
+
+            out_edge_degree = self.cfg.out_degree(node)
+
+            if out_edge_degree == 0:
+                return self._end_node(node)
+            elif out_edge_degree == 1:
+                return self._unconditional_node(node)
+            else:
+                return node_with_multiple_out_edges(node)
+
+    def _multi_outedge_node_body(self, node: int):
+        """Appends code to set the state to a successor node, depending on the WAT code's $control_val variable."""
+        if self.cfg.out_degree(node) < 2:
+            raise ValueError("Invalid usage: called _multi_outedge_node_body for node with <2 out edges")
+
+        current_control_val = 0
+
+        for edge in self.cfg.out_edges(node):
+            _, dst = edge
+            self.code += indent(dedent('''
+                    (i32.eq (local.get $control_val) (i32.const {cv}))
+                    (if (then (local.set $state (i32.const {id}))))
+                '''.format(cv=current_control_val, id=dst)), '\t\t\t\t\t')
+            current_control_val += 1
+
+        return self
 
     def _unconditional_node(self, node: int):
         """Generates code for an unconditional node."""
@@ -246,7 +281,7 @@ class WATProgramBuilder:
         if not has_starting_node:
             raise Exception('No node with id "n1" (default starting node id)')
 
-    def build(self):
+    def build(self, with_edge_aggregation: bool = False):
         """Builds the WebAssembly Text (WAT) program."""
         from .WATProgram import WATProgram  # Deferred import to avoid circular dependency
 
@@ -255,7 +290,7 @@ class WATProgramBuilder:
         # BUILD
         self._start_of_program()
         for node in self.cfg.nodes():
-            self._add_node_code(node)
+            self._add_node_code(node, with_edge_aggregation)
         self._end_of_program()
 
         self.is_built = True
