@@ -173,13 +173,12 @@ class CFG:
     def in_edges(self, node: int) -> nx.classes.reportviews.InMultiEdgeView:
         return self.graph.in_edges(node)
 
-    """
     def out_degree(self, node: int) -> int:
-        return self.graph.out_degree(node)  # TODO: "'int' object is not callable"?
+        return self.graph.out_degree(node)  # Safe to ignore "'int' object is not callable" warning (nx code does)
 
     def in_degree(self, node: int) -> int:
-        return self.graph.in_degree(node) # TODO: "'int' object is not callable"?
-    """
+        return self.graph.in_degree(node) # Safe to ignore "'int' object is not callable" warning (nx code does)
+
 
     # VALIDATE
 
@@ -317,21 +316,19 @@ class CFG:
 
         while len(directions) < max_length:
 
-            # TODO: use edges, surely?
-
             # print("current_node: {id}, type: {type}, {children}".format(id=current_node, type=self.node_type(current_node), children=self.children(current_node)))
 
             if self.node_type(current_node) == NodeType.END:
                 break
-            elif self.node_type(current_node) == NodeType.UNCONDITIONAL:
-                current_node = self.children(current_node)[0]
-                # no choice made so no need to add to input path
+            elif self.out_degree(current_node) == 1: # unconditional (+ with one edge)
+                edge_index = 0
+                # no choice made so don't require a direction
             else:
-                # TODO: but should I be choosing random EDGE as can be multiple out edges between two nodes?
-                random_child_index = random.randint(0, len(self.children(current_node))-1)
-                # print(random_child_index)
-                directions.append(random_child_index)
-                current_node = self.children(current_node)[random_child_index]
+                edge_index = random.randint(0, self.out_degree(current_node)-1)
+                directions.append(edge_index)
+
+            _, dst = list(self.out_edges(current_node))[edge_index]
+            current_node = dst
 
         return directions
 
