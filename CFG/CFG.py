@@ -310,25 +310,35 @@ class CFG:
 
     def generate_valid_input_directions(self, max_length: int = 64) -> list[int]:
 
-        directions: list[int] = []
+        attempts: int = 1
+        MAX_ATTEMPTS = 16
 
-        current_node = 1  # starting node
+        while attempts < MAX_ATTEMPTS:
 
-        while len(directions) < max_length:
+            directions: list[int] = []
 
-            # print("current_node: {id}, type: {type}, {children}".format(id=current_node, type=self.node_type(current_node), children=self.children(current_node)))
+            current_node = 1  # starting node
 
+            while len(directions) < max_length:
+
+                if self.node_type(current_node) == NodeType.END:
+                    break
+                elif self.out_degree(current_node) == 1:
+                    edge_index = 0
+                    # no choice made so it doesn't require a direction
+                else:
+                    edge_index = random.randint(0, self.out_degree(current_node) - 1)
+                    directions.append(edge_index)
+
+                _, dst = list(self.out_edges(current_node))[edge_index]
+                current_node = dst
+
+            # if directions results in full path, return
             if self.node_type(current_node) == NodeType.END:
-                break
-            elif self.out_degree(current_node) == 1: # unconditional (+ with one edge)
-                edge_index = 0
-                # no choice made so don't require a direction
+                return directions
+            elif attempts < MAX_ATTEMPTS:
+                attempts += 1
             else:
-                edge_index = random.randint(0, self.out_degree(current_node)-1)
-                directions.append(edge_index)
-
-            _, dst = list(self.out_edges(current_node))[edge_index]
-            current_node = dst
-
-        return directions
-
+                raise RuntimeError("Failed to generate input directions of max length {len}. "
+                                   "Check CFG end nodes are reachable or increase max_length parameter")
+            continue
