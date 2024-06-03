@@ -67,8 +67,6 @@ def generate_and_save_cfg(i, include_png: bool = False):
 
 # -----------
 
-
-os.makedirs('./results/generated_cfgs/images', exist_ok=True)
 os.makedirs('./results/input_programs', exist_ok=True)
 
 # Generate and save CFGs
