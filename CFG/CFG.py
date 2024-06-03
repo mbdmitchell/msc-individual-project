@@ -7,6 +7,10 @@ import pickle
 
 from matplotlib import pyplot as plt
 
+from threading import Lock
+
+# Lock for thread safety when saving images
+save_lock = Lock()
 
 class NodeType(Enum):
     def __repr__(self):
@@ -60,10 +64,14 @@ class CFG:
     # FILE HANDLING
 
     def _save_image(cfg, filename: str):
-        plt.figure(figsize=(6, 6))
-        nx.draw(cfg.graph, with_labels=True, node_size=1000, font_size=20, font_weight='bold', font_color='white', arrowsize=40)
-        plt.savefig(filename)
-        plt.close()
+        with save_lock:
+            plt.figure(figsize=(10, 10))
+            pos = nx.spring_layout(cfg.graph)  # or any other layout algorithm
+            nx.draw(cfg.graph, pos, with_labels=True, node_size=1000, font_size=20, font_weight='bold',
+                    font_color='white', arrowsize=20)
+            plt.axis('off')
+            plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0.1)
+            plt.close()
 
     def save(self, filepath: str, fmt: GraphFormat = GraphFormat.CFG) -> None:
         """Saves the graph to a file in the specified format."""
