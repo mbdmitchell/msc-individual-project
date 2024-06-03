@@ -7,6 +7,7 @@ import pickle
 
 from matplotlib import pyplot as plt
 
+
 class NodeType(Enum):
     def __repr__(self):
         return f"<{self.__class__.__name__}.{self.name}: {self.value}>"
@@ -174,11 +175,18 @@ class CFG:
         return self.graph.in_edges(node)
 
     def out_degree(self, node: int) -> int:
-        return self.graph.out_degree(node)  # Safe to ignore "'int' object is not callable" warning (nx code does)
+        """
+        Returns out degree of node.
+        NB: Safe to ignore "'int' object is not callable" warning
+        """
+        return self.graph.out_degree(node)
 
     def in_degree(self, node: int) -> int:
-        return self.graph.in_degree(node) # Safe to ignore "'int' object is not callable" warning (nx code does)
-
+        """
+        Returns in degree of node.
+        NB: Safe to ignore "'int' object is not callable" warning
+        """
+        return self.graph.in_degree(node)
 
     # VALIDATE
 
@@ -196,7 +204,7 @@ class CFG:
             return False
 
         entry_node: int = self.entry_notes()[0]
-        all_nodes_reachable: bool = all(nx.algorithms.has_path(self, entry_node, node) for node in self.nodes())
+        all_nodes_reachable: bool = all(self.is_reachable(entry_node, node) for node in self.nodes())
 
         return all_nodes_reachable
 
@@ -207,7 +215,6 @@ class CFG:
             no_of_out_edges = len(self.out_edges(current_node))
             if no_of_out_edges == 0:
                 current_node = self.children(current_node)[0]"""
-
 
     def is_entry_or_exit_node(self, node: int) -> bool:
         return CFG.is_start_node(node) or self.node_type(node) == NodeType.END
