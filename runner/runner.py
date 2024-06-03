@@ -52,38 +52,50 @@ def validate_wasm_files(folder_path):
         print('All wasm files are valid')
 
 
+base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
+
+input_program_path = os.path.join(base_path, 'input_programs')
+generated_cfg_path = os.path.join(base_path, 'generated_cfgs')
+cfg_image_path = os.path.join(generated_cfg_path, 'images')
+
 def process_file(i, pickle_file):
-    cfg = CFG().load(f'./results/generated_cfgs/{pickle_file}')
-    program: WATProgram = WATProgramBuilder(filename=f'./results/generated_cfgs/{pickle_file}').build()
-    program.save(f'./results/input_programs/code{i}', WebAssemblyFormat.WASM)
-    program.save(f'./results/input_programs/code{i}', WebAssemblyFormat.WAT)
+    cfg = CFG().load(os.path.join(generated_cfg_path, pickle_file))
+    path = os.path.join(base_path, f'code{i}')
+    pickle_path = os.path.join(base_path, 'generated_cfgs', pickle_file)
+    program: WATProgram = WATProgramBuilder(filename=pickle_path).build()
+    program.save(os.path.join(input_program_path, f'code{i}'), WebAssemblyFormat.WASM)
+    program.save(os.path.join(input_program_path, f'code{i}'), WebAssemblyFormat.WAT)
 
 
 def generate_and_save_cfg(i, include_png: bool = False):
     cfg = CFG.generate_valid_cfg()
-    cfg.save(f'./results/generated_cfgs/cfg{i}.pickle', GraphFormat.CFG)
-    if include_png:
-        cfg.save(f'./results/generated_cfgs/images/cfg{i}.png', GraphFormat.PNG)
-
+    cfg.save(os.path.join(generated_cfg_path, f'images/cfg{i}.png'), GraphFormat.PNG)
+    cfg.save(os.path.join(generated_cfg_path, f'cfg{i}.pickle'), GraphFormat.CFG)
+    # TODO: re-add include_png
 # -----------
 
-os.makedirs('./results/input_programs', exist_ok=True)
+
+os.makedirs(base_path, exist_ok=True)
+os.makedirs(cfg_image_path, exist_ok=True)
+os.makedirs(input_program_path, exist_ok=True)
 
 # Generate and save CFGs
 
 num_cfgs = 5
 
+# TODO: "Exception occurred: range object index out of range"
 tasks = [generate_and_save_cfg] * num_cfgs
 task_args_list = [(i,) for i in range(num_cfgs)]
 execution_time = execute_concurrently(tasks, task_args_list)
+
 print(f"Time taken to generate and save CFGs: {execution_time:.2f} seconds")
 
 # Load CFGs and generate WAT programs
-pickle_files = [f for f in os.listdir('./results/generated_cfgs') if f.endswith('.pickle')]
+pickle_files = [f for f in os.listdir(os.path.join(base_path, 'generated_cfgs')) if f.endswith('.pickle')]
 tasks = [process_file] * len(pickle_files)
 
 task_args_list = [(i, pickle_file) for i, pickle_file in enumerate(pickle_files)]
 execution_time = execute_concurrently(tasks, task_args_list)
 print(f"Time taken to process files: {execution_time:.2f} seconds")
 
-validate_wasm_files('./results/input_programs/')
+validate_wasm_files(input_program_path)
