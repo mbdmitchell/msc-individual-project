@@ -94,22 +94,6 @@ class CFG:
         self.graph = cfg_graph.graph
         # Add additional attributes from CFG graph if it becomes necessary
 
-    # CTOR
-
-    def __init__(self, filepath: Optional[str] = None,
-                 graph: Optional[nx.MultiDiGraph] = None):
-        """filepath to pickle'd CFG obj"""
-
-        if graph and filepath:
-            raise ValueError("Don't include both a graph and filename in the parameters")
-
-        self.graph = nx.MultiDiGraph()
-
-        if graph:
-            self.graph = graph
-        elif filepath:
-            self.load(filepath)
-
     # GETTERS
 
     def graph(self) -> nx.MultiDiGraph:  # TODO: def graph_as(fmt: GraphFormat)
@@ -296,37 +280,55 @@ class CFG:
     @staticmethod
     def generate_valid_cfg(seed: int = None) -> 'CFG':
 
-        from .cfg_generator \
-            import generate_random_tree, \
+        if seed is None:
+            seed = random.randint(0, 2 ** 32 - 1)
+        random.seed(seed)
+
+        from .cfg_generator import generate_random_tree, \
             reduce_no_of_exit_nodes_to_n, \
             add_back_edges, \
             add_forward_edges, \
             add_self_loops
 
-        # TODO: inform params w/ a seed
+        # initial cfg
 
-        # TODO: change from tree -> directed acyclic graph
-        cfg = generate_random_tree(target_depth=3, max_children_per_node=3)
-        reduce_no_of_exit_nodes_to_n(cfg, 1)
-        add_back_edges(cfg, 3)
-        add_forward_edges(cfg, 3)
+        tree_depth = random.choice(range(2, 6))
+        tree_max_children = random.choice(range(2, 6))
+
+        cfg = generate_random_tree(target_depth=tree_depth, max_children_per_node=tree_max_children)
+
+        # assign parameters, all determined by seed
+
+        org_no_of_end_nodes = sum(1 for node in cfg.nodes() if cfg.node_type(node) == NodeType.END)
+
+        no_of_end_nodes = random.choice(range(1, org_no_of_end_nodes + 1))
+        no_of_nodes = len(cfg.nodes())
+        no_of_back_edges = random.choice(range(0, no_of_nodes // 2))
+        no_of_forward_edges = random.choice(range(0, no_of_nodes // 2))
+        no_of_self_loops = random.choice(range(0, no_of_nodes // 4))
+
+        # transform
+
+        reduce_no_of_exit_nodes_to_n(cfg, no_of_end_nodes)
+        add_back_edges(cfg, no_of_back_edges)
+        add_forward_edges(cfg, no_of_forward_edges)
+        add_self_loops(cfg, no_of_self_loops)
         # todo: MISC. RANDOM EDGES & CROSS EDGES
-        add_self_loops(cfg, 1)
 
         return cfg
 
     def generate_valid_input_directions(self, max_length: int = 64) -> list[int]:
 
-        attempts: int = 1
         MAX_ATTEMPTS = 16
 
-        while attempts < MAX_ATTEMPTS:
+        for _ in range(MAX_ATTEMPTS):
 
             directions: list[int] = []
-
             current_node = 1  # starting node
 
-            while len(directions) < max_length:
+            length_remaining = max_length
+
+            while length_remaining > 0:
 
                 if self.node_type(current_node) == NodeType.END:
                     break
@@ -336,6 +338,7 @@ class CFG:
                 else:
                     edge_index = random.randint(0, self.out_degree(current_node) - 1)
                     directions.append(edge_index)
+                    length_remaining -= 1
 
                 _, dst = list(self.out_edges(current_node))[edge_index]
                 current_node = dst
@@ -343,9 +346,10 @@ class CFG:
             # if directions results in full path, return
             if self.node_type(current_node) == NodeType.END:
                 return directions
-            elif attempts < MAX_ATTEMPTS:
-                attempts += 1
             else:
-                raise RuntimeError("Failed to generate input directions of max length {len}. "
-                                   "Check CFG end nodes are reachable or increase max_length parameter")
-            continue
+                continue
+
+        raise RuntimeError("Failed to generate input directions of max length {len}. "
+                           "Check CFG end nodes are always reachable or increase max_length parameter"
+                           .format(len=max_length))
+
