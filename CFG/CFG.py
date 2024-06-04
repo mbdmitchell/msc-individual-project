@@ -370,7 +370,11 @@ class CFG:
 
         return cfg
 
-    def generate_valid_input_directions(self, max_length: int = 64) -> list[int]:
+    def generate_valid_input_directions(self, seed: int = None, max_length: int = 64) -> list[int]:
+
+        if seed is None:
+            seed = random.randint(0, 2 ** 32 - 1)
+        random.seed(seed)
 
         MAX_ATTEMPTS = 16
 
