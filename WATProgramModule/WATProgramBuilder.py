@@ -224,7 +224,14 @@ class WATProgramBuilder:
         """Appends code to set the state to a successor node, depending on the WAT code's $control_val variable."""
         if self.cfg.out_degree(node) < 2:
             raise ValueError("Invalid usage: called _multi_outedge_node_body for node with <2 out edges")
-
+        self.code += '''
+                    (local.set $control_val 
+                        (call $calc_cntrl_val (local.get $control_index))
+                    ) 
+                    (local.set $control_index 
+                        (call $inc (local.get $control_index))
+                    )         
+                    '''
         current_control_val = 0
 
         for edge in self.cfg.out_edges(node):
