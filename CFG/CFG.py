@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional
 import networkx as nx
 import pickle
+import pygraphviz
 
 from matplotlib import pyplot as plt
 
@@ -66,9 +67,24 @@ class CFG:
     def _save_image(cfg, filename: str):
         with save_lock:
             plt.figure(figsize=(10, 10))
-            pos = nx.spring_layout(cfg.graph)  # or any other layout algorithm
-            nx.draw(cfg.graph, pos, with_labels=True, node_size=1000, font_size=20, font_weight='bold',
-                    font_color='white', arrowsize=20)
+            pos = nx.nx_agraph.graphviz_layout(cfg.graph, prog="twopi", root=1)
+            # pos = nx.spring_layout(cfg.graph)  # or any other layout algorithm
+            nx.draw(cfg.graph, pos, with_labels=True, font_color='white')
+
+            """ TODO: 1) Fix the multi edge issue where many edges from n to m are represented w/ just one
+            2) eg. n <--> m displays only one edge label
+            # Generate edge labels with indices
+            edge_labels = {}
+            for node in cfg.graph.nodes():
+                out_edges = list(cfg.graph.out_edges(node))
+                if len(out_edges) > 1:  # the edges of nodes with out_degree <= 1 should have not label
+                    for idx, edge in enumerate(out_edges):
+                        edge_labels[edge] = str(idx)
+                        
+            nx.draw_networkx_edge_labels(cfg.graph, pos, edge_labels=edge_labels, font_color='red')
+            """
+
+
             plt.axis('off')
             plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0.1)
             plt.close()
