@@ -350,11 +350,11 @@ class CFG:
 
         org_no_of_end_nodes = sum(1 for node in cfg.nodes() if cfg.node_type(node) == NodeType.END)
 
-        no_of_end_nodes = random.choice(range(1, org_no_of_end_nodes + 1))
+        no_of_end_nodes = random.choice(range(1, 1 + org_no_of_end_nodes))
         no_of_nodes = len(cfg.nodes())
-        no_of_back_edges = random.choice(range(0, no_of_nodes // 2))
-        no_of_forward_edges = random.choice(range(0, no_of_nodes // 2))
-        no_of_self_loops = random.choice(range(0, no_of_nodes // 4))
+        no_of_back_edges = random.choice(range(0, 1 + no_of_nodes // 2))
+        no_of_forward_edges = random.choice(range(0, 1 + no_of_nodes // 2))
+        no_of_self_loops = random.choice(range(0, 1 + no_of_nodes // 4))
 
         # transform
 
