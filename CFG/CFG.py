@@ -410,3 +410,31 @@ class CFG:
                            "Check CFG end nodes are always reachable or increase max_length parameter"
                            .format(len=max_length))
 
+    def expected_output_path(self, input_directions: list[int]) -> list[int]:
+
+        current_node = 1
+        input_ix = 0
+
+        path: list[int] = [current_node]
+
+        length = len(input_directions)
+
+        while input_ix <= length:
+
+            if self.node_type(current_node) == NodeType.END:
+                break
+            elif self.out_degree(current_node) == 1:
+                edge_index = 0
+            else:
+                edge_index = input_directions[input_ix]
+                input_ix += 1
+
+            _, current_node = list(self.out_edges(current_node))[edge_index]
+
+            path.append(current_node)
+
+        if self.node_type(current_node) != NodeType.END and input_ix != len(input_directions):
+            raise RuntimeError("Error") # todo more descriptive
+
+        return path
+
