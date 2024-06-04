@@ -61,6 +61,10 @@ class CFG:
 
         return True
 
+    def __hash__(self):
+        nodes = frozenset((n, frozenset(d.items())) for n, d in self.graph.nodes(data=True))
+        edges = frozenset((u, v, frozenset(d.items())) for u, v, d in self.graph.edges(data=True))
+        return hash((nodes, edges))
 
     # FILE HANDLING
 
