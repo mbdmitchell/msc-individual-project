@@ -6,7 +6,7 @@ from utils import execute_concurrently, test_cfg
 
 os.makedirs('./results', exist_ok=True)
 
-# TESTED: Seed 0 -> 99,999
+# TESTED: Seed 0 -> 9,999
 
 no_of_cfgs = 10000
 no_of_paths = 10
