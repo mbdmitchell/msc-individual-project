@@ -406,9 +406,10 @@ class CFG:
             else:
                 continue
 
-        raise RuntimeError("Failed to generate input directions of max length {len}. "
-                           "Check CFG end nodes are always reachable or increase max_length parameter"
-                           .format(len=max_length))
+        # TODO: ATTEMPTS is silly. If we are not at exit node by max_length, just find and follow shortest path to exit
+
+        raise RuntimeError(f'Failed to generate input directions of max length {max_length}. '
+                           'Check CFG end nodes are always reachable or increase max_length parameter')
 
     def expected_output_path(self, input_directions: list[int]) -> list[int]:
 
