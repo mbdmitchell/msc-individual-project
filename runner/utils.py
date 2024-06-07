@@ -18,7 +18,7 @@ logging.basicConfig(
     filename='./runner/results/mismatch_log.txt',   # Log file name
     level=logging.INFO,            # Log level
     format='%(message)s',  # Log format
-    filemode='w'                   # Overwrite the log file each run
+    filemode='a'
 )
 
 
@@ -64,13 +64,18 @@ def run_subprocess(command, verbose = False):
     return True
 
 
-def test_cfg(seed: int, no_of_paths: int, verbose: bool = False):
+def test_cfg(seed: int, no_of_paths: int = None, verbose: bool = False):
 
     global processed_cfgs
 
     def in_processed_cfgs(cfg_hash):
         with processed_cfgs_lock:
             return cfg_hash in processed_cfgs
+
+    def calc_no_of_paths(cfg: CFG):
+        graph_complexity = (cfg.number_of_edges() + cfg.number_of_nodes()) // 2  # an approx measure of complexity
+        max_no_of_paths = 50
+        return min(graph_complexity, max_no_of_paths)
 
     cfg = CFG.generate_valid_cfg(seed)
 
@@ -98,6 +103,9 @@ def test_cfg(seed: int, no_of_paths: int, verbose: bool = False):
 
     # ... run for each input direction
 
+    if no_of_paths is None:
+        no_of_paths = calc_no_of_paths(cfg)
+
     input_directions = [cfg.generate_valid_input_directions(seed + j) for j in range(no_of_paths)]
 
     for d in input_directions:
@@ -122,11 +130,56 @@ def test_cfg(seed: int, no_of_paths: int, verbose: bool = False):
         is_match: bool = actual_output_path == expected_output_path
 
         if not is_match:
+            msg: str = f'CFG SEED {seed}! Directions: {d}. Expected: {expected_output_path}. Actual: {actual_output_path}'
             with print_lock:
-                logging.info(f'CFG SEED {seed}! Expected: {expected_output_path}. Actual: {actual_output_path}')
+                print(msg)
+                logging.info(msg)
+
 
     shutil.rmtree(f'./results/cfg{seed}')
 
     if verbose:
         with print_lock:
             print(f'Done: CFG SEED {seed}')
+
+
+def manual_test_cfg(cfg_seed: int, input_directions: list[int], verbose: bool = False):
+
+    cfg = CFG.generate_valid_cfg(cfg_seed)
+
+    # TODO: change so number of paths based on complexity of CFG
+
+    # ... generate wasm binary
+
+    os.makedirs(f'./results/cfg{cfg_seed}', exist_ok=True)
+
+    program = WATProgramBuilder(cfg=cfg).build()
+    program.save(os.path.join(f'./results/cfg{cfg_seed}', 'code'), WebAssemblyFormat.WASM)
+    program.save(os.path.join(f'./results/cfg{cfg_seed}', 'code'), WebAssemblyFormat.WAT)  # for debugging
+
+    # ... validate wasm binary
+
+    run_subprocess(['wasm-validate', '--enable-multi-memory', f'./runner/results/cfg{cfg_seed}/code.wasm'])
+
+
+    with open(f'./results/cfg{cfg_seed}/directions.txt', 'w') as file:
+        file.write(str(input_directions))
+
+    # ... run wasm module (w/ directions.txt in same folder as code.wasm)
+
+    run_subprocess(['node', './runner/run_manual_cf.js', f'./results/cfg{cfg_seed}/code.wasm'])
+
+    # ... actual & expected output path
+
+    with open(f'./results/cfg{cfg_seed}/output.txt') as f:
+        output_txt = f.readline()
+
+    actual_output_path = [int(x) for x in output_txt.split(",")]
+    expected_output_path = cfg.expected_output_path(input_directions)
+
+    # ... display results
+
+    is_match: bool = actual_output_path == expected_output_path
+
+    msg: str = f'CFG SEED {cfg_seed}. Directions: {input_directions}. Expected: {expected_output_path}. Actual: {actual_output_path}'
+    print(msg)
