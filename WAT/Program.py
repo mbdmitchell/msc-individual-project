@@ -8,16 +8,16 @@ class WebAssemblyFormat(Enum):
     WASM = 1
 
 
-class WATProgram:
+class Program:
 
-    def __init__(self, program_builder: 'WATProgramBuilder'):
+    def __init__(self, program_builder: 'ProgramBuilder'):
         """
         Initializes the WATProgram with code from the provided program builder.
 
         Note: To ensure valid WATProgram, this constructor should only be called
         by WATProgramBuilder. Direct instantiation of WATProgram is not recommended.
         """
-        if not isinstance(program_builder, WATProgramBuilder):
+        if not isinstance(program_builder, ProgramBuilder):
             raise TypeError("WRONG TYPE")
         if not program_builder.is_built:
             raise ValueError("The provided program builder has not completed building the program.")
@@ -76,4 +76,4 @@ class WATProgram:
                 os.remove(wat_path)
 
 
-from .WATProgramBuilder import WATProgramBuilder
+from .ProgramBuilder import ProgramBuilder

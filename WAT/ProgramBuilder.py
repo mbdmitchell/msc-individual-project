@@ -5,7 +5,7 @@ from textwrap import dedent, indent
 # TODO: decouple code formatting from code generation
 
 
-class WATProgramBuilder:
+class ProgramBuilder:
 
     is_built: bool = False
     code: str = ''
@@ -22,7 +22,7 @@ class WATProgramBuilder:
         else:
             self.cfg = cfg
 
-    # TODO: re-add ```-> 'WATProgramBuilder'```
+    # TODO: re-add ```-> 'ProgramBuilder'```
     def _start_of_program(self):
         """
         Adds the initial boilerplate and setup code for the WebAssembly Text (WAT) program.
@@ -290,7 +290,7 @@ class WATProgramBuilder:
 
     def build(self, with_edge_aggregation: bool = False):
         """Builds the WebAssembly Text (WAT) program."""
-        from .WATProgram import WATProgram  # Deferred import to avoid circular dependency
+        from .Program import Program  # Deferred import to avoid circular dependency
 
         self._validate()
 
@@ -302,4 +302,4 @@ class WATProgramBuilder:
 
         self.is_built = True
 
-        return WATProgram(self)
+        return Program(self)
