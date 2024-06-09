@@ -6,8 +6,6 @@ from queue import Queue
 from CFG import CFG, NodeType
 
 
-# TODO: Have seed parameter for all
-
 def generate_random_tree(target_depth: int, max_children_per_node: int = 3) -> CFG:
     """Generate CFG with tree structure. Used as foundation for building CFG"""
 
@@ -45,25 +43,7 @@ def generate_random_tree(target_depth: int, max_children_per_node: int = 3) -> C
     return cfg
 
 
-""" TODO: Impl. following, then replace _generate_tree(...) 
-1) Not a "connected graph" 2) Doesn't ensure node %1 has in_degree = 0 
-
-http://misailo.web.engr.illinois.edu/courses/526-sp17/lec1.pdf
-"""
-
-'''def _generate_random_dag(n: int, p: float):
-    """Generate a random DAG (w/ no disconnected components) of n nodes and edge probability p"""
-    random_graph = nx.fast_gnp_random_graph(n, p, directed=True)
-    # "u < v" ensures no cycles. (Want to add cycles later in a more controlled way)
-    random_dag = nx.MultiDiGraph([(u, v) for (u, v) in random_graph.edges() if u < v])
-
-
-    # incr. nodes so entry node is %1
-    mapping = {node: node + 1 for node in random_dag.nodes()}
-    nx.relabel_nodes(random_dag, mapping, copy=False)
-
-    return CFG.CFG(graph=random_dag)
-'''
+# TODO: New CFG generator ensuring valid structured CFGs
 
 
 def add_back_edges(cfg: CFG, no_of_back_links: int) -> CFG:
