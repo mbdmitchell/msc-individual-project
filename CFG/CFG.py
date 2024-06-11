@@ -174,8 +174,9 @@ class CFG:
     def children(self, node: int):
         return list(self.graph.successors(node))
 
-    def entry_nodes(self) -> list[int]:
-        return [node for node in self.nodes() if not self.parents(node)]  # todo nodes w/ entry_block label
+    def entry_node(self) -> int:
+        # TODO: if there is an entry_block label, use. Else...
+        return next((node for node in self.nodes() if not self.parents(node)), None)
 
     def exit_nodes(self) -> list[int]:
         return [node for node in self.nodes() if not self.children(node) and self.parents(node)]
@@ -237,10 +238,8 @@ class CFG:
         - all nodes are reachable from the entry point.
         - TODO: all nodes have path to an exit node
         """
-        if len(self.entry_nodes()) != 1:
-            return False
 
-        entry_node: int = self.entry_nodes()[0]
+        entry_node: int = self.entry_node()
         all_nodes_reachable: bool = all(self.is_reachable(entry_node, node) for node in self.nodes())
 
         return all_nodes_reachable

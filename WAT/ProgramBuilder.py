@@ -72,7 +72,7 @@ class ProgramBuilder:
                     (local.set $output_index (i32.const 0))
                     (local.set $control_index (i32.const 0))
                 
-                    (local.set $state (i32.const 1)) ;; set state to starting node
+                    (local.set $state (i32.const {entry_block})) ;; set state to starting node
                 
                     (block $to_end             
                         (loop $to_start
@@ -80,7 +80,8 @@ class ProgramBuilder:
                             ;; IF STATE==0, break
                             (i32.eqz (local.get $state))  
                             (if (then (br $to_end)))
-            ''')
+            '''.format(entry_block=self.cfg.entry_node()))
+
         return self
 
     def _end_of_program(self):
