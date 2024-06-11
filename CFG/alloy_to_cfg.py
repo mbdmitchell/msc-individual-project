@@ -135,6 +135,7 @@ def _get_node_data(root: ET.Element):
     """ TODO: 
     <skolem label="$this/backEdgeSeq"
     <skolem label="$this/exitEdge"
+    branchSet
     """
 
     return block_attrs

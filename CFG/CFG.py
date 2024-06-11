@@ -73,8 +73,8 @@ class CFG:
     def _save_image(cfg, filename: str):
         with save_lock:
             plt.figure(figsize=(10, 10))
-            pos = nx.nx_agraph.graphviz_layout(cfg.graph, prog="twopi", root=1)
-            # pos = nx.spring_layout(cfg.graph)  # or any other layout algorithm
+            # pos = nx.nx_agraph.graphviz_layout(cfg.graph, prog="twopi", root=1)
+            pos = nx.spring_layout(cfg.graph)  # or any other layout algorithm
             nx.draw(cfg.graph, pos, with_labels=True, font_color='white')
 
             """ TODO: 1) Fix the multi edge issue where many edges from n to m are represented w/ just one
