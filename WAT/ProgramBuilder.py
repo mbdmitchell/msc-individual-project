@@ -1,5 +1,5 @@
 
-from CFG import CFG, GraphFormat, NodeType
+from CFG import CFG, CFGFormat, NodeType
 from textwrap import dedent, indent
 
 # TODO: decouple code formatting from code generation
@@ -18,7 +18,7 @@ class ProgramBuilder:
         if cfg is None and filename is None:
             self.cfg = CFG()
         elif filename:
-            self.cfg = self.cfg = CFG().load(filename, GraphFormat.CFG)
+            self.cfg = self.cfg = CFG().load(filename, CFGFormat.CFG)
         else:
             self.cfg = cfg
 
