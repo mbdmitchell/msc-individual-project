@@ -13,6 +13,7 @@ from threading import Lock
 # Lock for thread safety when saving images
 save_lock = Lock()
 
+
 class NodeType(Enum):
     def __repr__(self):
         return f"<{self.__class__.__name__}.{self.name}: {self.value}>"
@@ -89,7 +90,6 @@ class CFG:
             nx.draw_networkx_edge_labels(cfg.graph, pos, edge_labels=edge_labels, font_color='red')
             """
 
-
             plt.axis('off')
             plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0.1)
             plt.close()
@@ -141,13 +141,13 @@ class CFG:
 
     # GETTERS
 
-    def graph(self) -> nx.MultiDiGraph:  # TODO: def graph_as(fmt: GraphFormat)
+    def graph(self) -> nx.MultiDiGraph:
         return self.graph
 
     # ... nodes ...
 
-    def nodes(self) -> list[int]:
-        return self.graph.nodes()
+    def nodes(self, data=False) -> list[int]:
+        return self.graph.nodes(data)
 
     def node_type(self, node: int):
         no_of_children = len(self.children(node))  # don't use self.out_edges as can has multiple edges to same node
@@ -174,8 +174,8 @@ class CFG:
     def children(self, node: int):
         return list(self.graph.successors(node))
 
-    def entry_notes(self) -> list[int]:
-        return [node for node in self.nodes() if not self.parents(node)]
+    def entry_nodes(self) -> list[int]:
+        return [node for node in self.nodes() if not self.parents(node)]  # todo nodes w/ entry_block label
 
     def exit_nodes(self) -> list[int]:
         return [node for node in self.nodes() if not self.children(node) and self.parents(node)]
@@ -185,6 +185,13 @@ class CFG:
 
     def descendants(self, node: int):
         return nx.descendants(self.graph, node)
+
+    def node_attributes(self, node):
+        if node in self.graph:
+            attrs = []
+            for attr, value in self.graph.nodes[node].items():
+                attrs.append(f"{attr}: {value}")
+            return attrs
 
     # ... count ...
 
@@ -230,10 +237,10 @@ class CFG:
         - all nodes are reachable from the entry point.
         - TODO: all nodes have path to an exit node
         """
-        if len(self.entry_notes()) != 1:
+        if len(self.entry_nodes()) != 1:
             return False
 
-        entry_node: int = self.entry_notes()[0]
+        entry_node: int = self.entry_nodes()[0]
         all_nodes_reachable: bool = all(self.is_reachable(entry_node, node) for node in self.nodes())
 
         return all_nodes_reachable
@@ -377,7 +384,7 @@ class CFG:
         for _ in range(MAX_ATTEMPTS):
 
             directions: list[int] = []
-            current_node = 1  # starting node
+            current_node = 1  # starting node TODO: update
 
             length_remaining = max_length
 
@@ -434,4 +441,3 @@ class CFG:
             raise RuntimeError("Error") # todo more descriptive
 
         return path
-
