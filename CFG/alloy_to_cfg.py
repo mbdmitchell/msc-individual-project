@@ -61,13 +61,15 @@ def _extract_edges_with_label(root: ET.Element, label_name: str):
 
 
 def _get_edges(root: ET.Element):
-    # TODO: give edges multiple labels/attrs (eg. BackEdge, '0')
-    back_edges = _extract_edges_with_label(root, "$this/backEdge")  # subset of branch edges
+    # TODO: give edges multiple labels/attrs (eg. [(('LoopHeader$0', 'LoopHeader$0'), ['BackEdge', '0'])])
+    back_edges = _extract_edges_with_label(root, "$this/backEdge") or []  # subset of branch edges
 
-    back_edges_set = set(back_edges)  # Convert to set for fast lookup
+    back_edges_set = set(back_edges) if back_edges else set()  # Convert to set for fast lookup
+
+    # all branch edges not already in back_edges_set
     branch_edges = [
-        (edge, label) for (edge, label) in _extract_edges_with_label(root, "branch")
-        if edge not in {edge for edge, _ in back_edges_set}
+        (edge, label) for (edge, label) in (_extract_edges_with_label(root, "branch") or [])  # Ensure it's a list (not None)
+        if edge not in {e[0] for e in back_edges_set}
     ]
 
     return back_edges + branch_edges
