@@ -23,11 +23,12 @@ class NodeType(Enum):
     END = 4
 
 
-class GraphFormat(Enum):
+class CFGFormat(Enum):
     CFG = 0,
     NX_MULTI_DIGRAPH = 1,
     GRAPH_ML = 2
     PNG = 3
+    ALLOY = 4
 
 
 class CFG:
@@ -93,53 +94,44 @@ class CFG:
             plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0.1)
             plt.close()
 
-    def save(self, filepath: str, fmt: GraphFormat = GraphFormat.CFG) -> None:
+    def save(self, filepath: str, fmt: CFGFormat = CFGFormat.CFG) -> None:
         """Saves the graph to a file in the specified format."""
-        # TODO: Refactor?
-        """
-        if fmt not in {GraphFormat.NX_MULTI_DIGRAPH, GraphFormat.GRAPH_ML, GraphFormat.CFG, GraphFormat.PNG}:
-            raise TypeError("Chosen GraphFormat not supported")
-            
-        with open(filepath, 'wb') as file:
-            if fmt == GraphFormat.PNG:
-                self._save_image(filepath)
-            elif fmt == GraphFormat.CFG:
-                pickle.dump(self, file)
-            else:
-                pickle.dump(self.graph, file)
-        """
 
         directory = os.path.dirname(filepath)
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        if fmt == GraphFormat.GRAPH_ML:
+        if fmt == CFGFormat.GRAPH_ML:
             nx.write_graphml(self.graph, filepath)
-        elif fmt == GraphFormat.CFG:
+        elif fmt == CFGFormat.CFG:
             with open(filepath, 'wb') as file:
                 pickle.dump(self, file)
-        elif fmt == GraphFormat.NX_MULTI_DIGRAPH:
+        elif fmt == CFGFormat.NX_MULTI_DIGRAPH:
             with open(filepath, 'wb') as file:
                 pickle.dump(self.graph, file)
-        elif fmt == GraphFormat.PNG:
+        elif fmt == CFGFormat.PNG:
             self._save_image(filepath)
         else:
-            raise ValueError('Unrecognised GraphFormat')
+            raise ValueError('Unsupported CFGFormat')
 
-    def load(self, filepath: str, fmt: GraphFormat = GraphFormat.CFG) -> 'CFG':
-        """
-        Loads a graph from a file in the specified format.
-        """
+    def load(self, filepath: str, fmt: CFGFormat = CFGFormat.CFG) -> 'CFG':
+        """Loads a graph from a file in the specified format."""
 
-        if fmt not in {GraphFormat.NX_MULTI_DIGRAPH, GraphFormat.CFG}:
-            raise TypeError("Chosen GraphFormat not supported")
+        from CFG.alloy_to_cfg import alloy_to_cfg
 
-        if fmt == GraphFormat.GRAPH_ML:
+        if fmt not in {CFGFormat.NX_MULTI_DIGRAPH, CFGFormat.CFG, CFGFormat.ALLOY}:
+            raise TypeError("Unsupported CFGFormat")
+
+        if fmt == CFGFormat.GRAPH_ML:
             self.graph = nx.read_graphml(filepath)
+            return self
+        elif fmt == CFGFormat.ALLOY:
+            cfg = alloy_to_cfg(filepath)
         else:
             with open(filepath, 'rb') as file:
-                g = pickle.load(file)
-                self._load_cfg(g)
+                cfg = pickle.load(file)
+
+        self._load_cfg(cfg)
 
         return self
 
@@ -170,6 +162,7 @@ class CFG:
 
     @staticmethod
     def is_start_node(node: int):
+        # TODO: THIS IS WRONG NOW
         return node == 1
 
     def is_end_node(self, node: int):
@@ -332,7 +325,10 @@ class CFG:
 
     @staticmethod
     def generate_valid_cfg(seed: int = None) -> 'CFG':
-
+        """
+        NB: Currently, CFGs generated w/ this function don't include necessary labels for optimal CFG->code conversion.
+        Generate CFGs with Alloy model and use cfg = CFG().load(filepath='./alloy-cfgs/cfg2.xml', fmt=CFGFormat.ALLOY)
+        """
         if seed is None:
             seed = random.randint(0, 2 ** 32 - 1)
         random.seed(seed)

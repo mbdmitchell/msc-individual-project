@@ -5,6 +5,7 @@ import random
 from queue import Queue
 from CFG import CFG, NodeType
 
+# TODO: NB: not as descriptive as CFGs generated w/ alloy (eg. no node attrs w/ continue, merge, exitBlock, etc)
 
 def generate_random_tree(target_depth: int, max_children_per_node: int = 3) -> CFG:
     """Generate CFG with tree structure. Used as foundation for building CFG"""
@@ -41,9 +42,6 @@ def generate_random_tree(target_depth: int, max_children_per_node: int = 3) -> C
         q2 = Queue()
 
     return cfg
-
-
-# TODO: New CFG generator ensuring valid structured CFGs
 
 
 def add_back_edges(cfg: CFG, no_of_back_links: int) -> CFG:
