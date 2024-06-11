@@ -1,4 +1,5 @@
 // e.g. % node run_manual_cf.js example.wasm
+// TODO: Low priority, reimplement in Python
 
 const fs = require('fs');
 const path = require('path');
