@@ -1,0 +1,93 @@
+(module
+
+        (import "js" "memory" (memory 0))
+
+        (memory $outputMemory 1)
+        (export "outputMemory" (memory $outputMemory))
+
+        (global $elem_size i32 (i32.const 4))
+
+        (func $byte_offset (param $index i32) (result i32)
+                (i32.mul (local.get $index) (global.get $elem_size))
+        )
+        (func $inc (param $num i32) (result i32)
+                (i32.add (local.get $num) (i32.const 1))
+        )
+        (func $calc_cntrl_val (param $index i32) (result i32)
+            (i32.load
+                (memory 0)
+                (call $byte_offset(local.get $index))
+            )
+        )
+        (func $store_in_output (param $index i32) (param $value i32)
+            (i32.store
+                (memory $outputMemory)
+                (call $byte_offset (local.get $index))
+                (local.get $value)
+            )
+        )
+
+        (func $cf (export "cf")
+
+            ;; setup
+
+            (local $output_index i32)
+            (local $control_index i32)
+            (local $control_val i32)
+
+            (local.set $output_index (i32.const 0))
+            (local.set $control_index (i32.const 0))
+
+            ;; control flow code
+
+            (call $store_in_output
+                (local.get $output_index)
+                (i32.const 4)
+            )
+            (local.set $output_index
+                (call $inc (local.get $output_index))
+            )
+
+            (call $store_in_output
+                (local.get $output_index)
+                (i32.const 1)
+            )
+            (local.set $output_index
+                (call $inc (local.get $output_index))
+            )
+
+            (local.set $control_val
+                (call $calc_cntrl_val (local.get $control_index))
+            )
+
+            (local.set $control_index
+                (call $inc (local.get $control_index))
+            )
+
+            (if (i32.eqz (local.get $control_val))
+                (then
+                    (call $store_in_output
+                        (local.get $output_index)
+                        (i32.const 2)
+                    )
+                    (local.set $output_index
+                        (call $inc (local.get $output_index))
+                    )
+                    return
+                )
+                (else
+                    (call $store_in_output
+                        (local.get $output_index)
+                        (i32.const 3)
+                    )
+                    (local.set $output_index
+                        (call $inc (local.get $output_index))
+                    )
+                    return
+                )
+            )
+            
+            
+        )
+)
+    

@@ -22,6 +22,7 @@ class Program:
         if not program_builder.is_built:
             raise ValueError("The provided program builder has not completed building the program.")
         self.code = program_builder.code
+        self.cfg = program_builder.cfg
         self.language = 'WAT'
 
     def get_wat_code(self) -> str:

@@ -74,6 +74,36 @@ def _get_edges(root: ET.Element):
 
     return back_edges + branch_edges
 
+def _get_edges_1(root: ET.Element):
+    """for alloy_to_cfg_1"""
+    # TODO: give edges multiple labels/attrs (eg. [(('LoopHeader$0', 'LoopHeader$0'), ['BackEdge', '0'])])
+    back_edges = _extract_edges_with_label(root, "$this/backEdge") or []  # subset of branch edges
+
+    back_edges_set = set(back_edges) if back_edges else set()  # Convert to set for fast lookup
+
+    # all branch edges not already in back_edges_set
+    branch_edges = [
+        (edge, label) for (edge, label) in (_extract_edges_with_label(root, "branch") or [])  # Ensure it's a list (not None)
+        if edge not in {e[0] for e in back_edges_set}
+    ]
+
+    return back_edges + branch_edges
+
+
+def _get_edges_2(root: ET.Element):
+    """Treat merge and continue edges as normal CFG edges"""
+    branch_edges = _get_edges_1(root)
+    def extract_and_filter_edges(label):
+        return [
+            (edge, label) for (edge, label) in (_extract_edges_with_label(root, label) or [])
+            if edge not in branch_edges
+        ]
+
+    branch_edges.extend(extract_and_filter_edges("merge"))
+    branch_edges.extend(extract_and_filter_edges("continue"))
+
+    return branch_edges
+
 
 def _standardise_label_name(old_name: str) -> str:
     """Standardise the labels from Alloy CFGs
@@ -88,7 +118,7 @@ def _standardise_label_name(old_name: str) -> str:
     return new_name
 
 
-def _get_node_data(root: ET.Element):
+def _get_node_data_1(root: ET.Element):
 
     block_attrs: dict[str, dict[str, bool | list[str]]] = {}
 
@@ -126,17 +156,41 @@ def _get_node_data(root: ET.Element):
         block_attrs[block][label_name] = block in sr_blocks
 
     add_attr("$this/structurallyDominates")
+    add_attr("$this/strictlyStructurallyDominates", predicate=lambda atom, block: atom.attrib['label'] != block)
     add_attr("$this/structurallyPostDominates")
     add_attr("$this/contains")
     add_attr("continue")
     add_attr("merge")
-    add_attr("$this/strictlyStructurallyDominates", predicate=lambda atom, block: atom.attrib['label'] != block)
+
 
     """ TODO: 
     <skolem label="$this/backEdgeSeq"
     <skolem label="$this/exitEdge"
     branchSet
     """
+
+    return block_attrs
+
+
+def _get_node_data_2(root: ET.Element):
+    """
+    Only store EntryBlock and ExitBlock attribute as all other block attributes can change
+    w/ treating merge and continue edges as normal edges.
+    """
+
+    block_attrs: dict[str, dict[str, bool | list[str]]] = {}
+
+    block_labels = ["this/EntryBlock", "$this/exitBlocks"]
+
+    for label in block_labels:
+        blocks = _extract_blocks_with_label(root, label)
+        for b in blocks:
+            if b not in block_attrs:
+                block_attrs[b] = {}
+            label_name = _standardise_label_name(label)
+            block_attrs[b][label_name] = True
+
+    # TODO NEXT: GET ALLLLLLL BLOCKS.
 
     return block_attrs
 
@@ -161,12 +215,12 @@ def transform_labels(data, label_mapping):
     return data
 
 
-def alloy_to_cfg(xml_filepath: str) -> CFG:
-
+def alloy_to_cfg(xml_filepath: str, convert_to_wasm_friendly_cfg: bool = True) -> CFG:
+    """ NB: Two versions as merge and continue edges have no sensible analogue in WASM. """
     xml = ET.parse(xml_filepath)
     root = xml.getroot()
 
-    raw_node_data = _get_node_data(root)
+    raw_node_data = _get_node_data_2(root) if convert_to_wasm_friendly_cfg else _get_node_data_1(root)
 
     # Map node labels to numerical IDs to conform with preexisting CFG->WASM conversion code
     node_label_to_id: dict[str, str] = {key: i + 1 for i, key in enumerate(raw_node_data)}
@@ -175,7 +229,12 @@ def alloy_to_cfg(xml_filepath: str) -> CFG:
     nodes = {node_label_to_id[key]: transform_labels(value, node_label_to_id) for key, value in raw_node_data.items()}
 
     # Transform edges to use numerical IDs
-    edges = [[(node_label_to_id[a], node_label_to_id[b]), c] for [(a, b), c] in _get_edges(root)]
+    raw_edge_data = _get_edges_2(root) if convert_to_wasm_friendly_cfg else _get_edges_1(root)
+
+    if convert_to_wasm_friendly_cfg:
+        edges = [[(node_label_to_id[a], node_label_to_id[b]), "Branch"] for [(a, b), _] in raw_edge_data]  # all edges are branches
+    else:
+        edges = [[(node_label_to_id[a], node_label_to_id[b]), c] for [(a, b), c] in raw_edge_data]
 
     graph = nx.MultiDiGraph()
 
@@ -187,3 +246,5 @@ def alloy_to_cfg(xml_filepath: str) -> CFG:
         graph.add_edge(scr, dst, edge_label)
 
     return CFG(graph=graph)
+
+
