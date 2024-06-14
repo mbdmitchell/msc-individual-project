@@ -114,7 +114,7 @@ class CFG:
         else:
             raise ValueError('Unsupported CFGFormat')
 
-    def load(self, filepath: str, fmt: CFGFormat = CFGFormat.CFG) -> 'CFG':
+    def load(self, filepath: str, fmt: CFGFormat = CFGFormat.CFG, load_as_wasm_friendly_cfg: bool = True) -> 'CFG':
         """Loads a graph from a file in the specified format."""
 
         from CFG.alloy_to_cfg import alloy_to_cfg
@@ -126,7 +126,7 @@ class CFG:
             self.graph = nx.read_graphml(filepath)
             return self
         elif fmt == CFGFormat.ALLOY:
-            cfg = alloy_to_cfg(filepath)
+            cfg = alloy_to_cfg(filepath, load_as_wasm_friendly_cfg)
         else:
             with open(filepath, 'rb') as file:
                 cfg = pickle.load(file)
@@ -231,27 +231,6 @@ class CFG:
     def is_reachable(self, source: int, destination: int) -> bool:
         return nx.algorithms.has_path(self, source, destination)
 
-    def is_valid(self) -> bool:
-        """
-        Validates the control flow graph by checking
-        - exactly one entry note
-        - all nodes are reachable from the entry point.
-        - TODO: all nodes have path to an exit node
-        """
-
-        entry_node: int = self.entry_node()
-        all_nodes_reachable: bool = all(self.is_reachable(entry_node, node) for node in self.nodes())
-
-        return all_nodes_reachable
-
-    """def is_valid_input_directions(self, directions: list[int]) -> bool:
-        current_node = 1
-        
-        while current_node not in self.exit_nodes():
-            no_of_out_edges = len(self.out_edges(current_node))
-            if no_of_out_edges == 0:
-                current_node = self.children(current_node)[0]"""
-
     def is_entry_or_exit_node(self, node: int) -> bool:
         return CFG.is_start_node(node) or self.node_type(node) == NodeType.END
 
@@ -339,7 +318,7 @@ class CFG:
             seed = random.randint(0, 2 ** 32 - 1)
         random.seed(seed)
 
-        from .cfg_generator import generate_random_tree, \
+        from .cfg_generator_OLD import generate_random_tree, \
             reduce_no_of_exit_nodes_to_n, \
             add_back_edges, \
             add_forward_edges, \
@@ -440,3 +419,56 @@ class CFG:
             raise RuntimeError("Error") # todo more descriptive
 
         return path
+
+    # ... block attributes + misc. details from alloy CFGs
+
+    def continue_attribute(self, block):
+        return self.graph.nodes[block]["Continue"]
+
+    def contains_attribute(self, block):
+        return self.graph.nodes[block]["Contains"]
+
+    def structurally_dominates(self, block):
+        return set(self.graph.nodes[block]["StructurallyDominates"])
+
+    def strictly_structurally_dominates(self, block):
+        return set(self.graph.nodes[block]["StrictlyStructurallyDominates"])
+
+    def structurally_post_dominates(self, block):
+        return set(self.graph.nodes[block]["StructurallyPostDominates"])
+
+    def is_loop_header(self, block):
+        return self.graph.nodes[block].get("LoopHeader", False) is not False
+
+    def is_selection_header(self, block):
+        return self.graph.nodes[block].get("SelectionHeader", False) is not False
+
+    def is_switch_header(self, block):
+        return self.graph.nodes[block].get("SwitchBlock", False) is not False
+    def is_entry_block(self, block):
+        return self.graph.nodes[block].get("EntryBlock", False) is not False
+
+    def is_exit_block(self, block):
+        return self.graph.nodes[block].get("ExitBlock", False) is not False
+
+    def is_basic_block(self, block):
+        return self.graph.nodes[block].get("Block", False) is not False
+
+    def contains_merge_instruction(self, block):
+        return self.graph.nodes[block].get("Merge") != []
+
+    def merge_block(self, block):
+        if not self.contains_merge_instruction(block):
+            raise ValueError("No merge block")
+        block: list = self.graph.nodes[block]["Merge"]
+        return block[0]
+
+    def is_structurally_reachable(self, block) -> bool:
+        return self.graph.nodes[block].get("StructurallyReachableBlock", False) is not False
+
+    def is_header_block(self, block) -> bool:
+        return self.contains_merge_instruction(block)
+
+
+    # TODO: Probably missing switch attrs or something
+

@@ -1,3 +1,4 @@
+# NB: Being depreciated. Generating CFGs w/ alloy model
 # Helper functions for class CFG.generate_valid_cfg()
 
 import itertools
