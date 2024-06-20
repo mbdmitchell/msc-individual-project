@@ -13,6 +13,8 @@ async function run_manual_cf(wasmPath) {
     const memory = new WebAssembly.Memory({ initial: 1 });
     const directionPath= path.resolve(path.dirname(wasmPath), 'directions.txt')
 
+    console.log("Directions:", directionPath)
+
     await populateMemoryBufferFromFile(memory, directionPath);
 
     var importObject = {
@@ -33,16 +35,15 @@ async function run_manual_cf(wasmPath) {
     
     const memoryArray = new Int32Array(instance.exports.outputMemory.buffer);
 
-    const outputDir = path.dirname(wasmPath);
+    // PRINT OUTPUT (can redirect in shell with `> ./output.txt`
 
-    await writeMemoryToFile(memoryArray, outputDir);
+    await printDetails(memoryArray);
 
 }
 
 async function populateMemoryBufferFromFile(memory, filePath) {
 
     const directionsData = await fs.promises.readFile(filePath, 'utf8'); // [0,0,4,3] correct
-
     const bufferValues = JSON.parse(directionsData); // [0,0,4,3] correct
     const buffer = new Uint32Array(memory.buffer);
 
@@ -50,14 +51,10 @@ async function populateMemoryBufferFromFile(memory, filePath) {
 
 }
 
-async function writeMemoryToFile(memoryArray, outputDir) {
+async function printDetails(memoryArray) {
     const firstZero = Array.from(memoryArray).indexOf(0);
     const data = Array.from(memoryArray.slice(0, firstZero)).join(', ');
-
-    const outputFilePath = path.resolve(outputDir, 'output.txt');
-
-    await fs.promises.writeFile(outputFilePath, data, 'utf8');
-    console.log(`Memory contents written to ${outputFilePath}`);
+    console.log(data)
 }
 
 const filePath = process.argv[2];

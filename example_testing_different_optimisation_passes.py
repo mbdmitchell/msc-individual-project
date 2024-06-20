@@ -7,8 +7,8 @@ from runner.utils import run_subprocess
 from WAT import *
 from CFG.example_CFGs import example_cfg_misc
 
-# TODO: Convert file to script:
-# eg. `./script.py <program_class_file> <optimisation_level(s)> <directions_file> > out.txt`
+# TODO: Convert to script:
+# eg. `./script.py <program_class_file> <optimisation_level> <directions_file> > out.txt`
 # (NB TO SELF: '>' redirects stdout externally from the shell)
 
 

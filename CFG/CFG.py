@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import random
 from enum import Enum
@@ -14,7 +16,7 @@ from threading import Lock
 save_lock = Lock()
 
 
-class NodeType(Enum):
+class NodeType(Enum): # TODO: Depreciate. (Use node attributes)
     def __repr__(self):
         return f"<{self.__class__.__name__}.{self.name}: {self.value}>"
 
@@ -40,8 +42,16 @@ class CFG:
     """
 
     def __init__(self, filepath: Optional[str] = None,
-                 graph: Optional[nx.MultiDiGraph] = None):
-        """filepath to pickle'd CFG obj"""
+                 graph: Optional[nx.MultiDiGraph] = None,
+                 entry_block: Optional[int] = None):
+        """
+        filepath: filepath to pickle'd CFG obj
+        graph: graph with no node attributes (except possibly EntryBlock)
+        """
+
+        def has_entry_block_attr(g: nx.MultiDiGraph) -> bool:
+            entry_block_count = sum(1 for _, attrs in g.nodes(data=True) if 'EntryBlock' in attrs)
+            return entry_block_count == 1
 
         if graph and filepath:
             raise ValueError("Don't include both a graph and filename in the parameters")
@@ -49,6 +59,13 @@ class CFG:
         self.graph = nx.MultiDiGraph()
 
         if graph:
+            self.graph = graph
+            # TODO: Ensure graph has no node attributes, except possibly EntryBlock
+            if not (entry_block or has_entry_block_attr(graph)):
+                raise ValueError("No provided entry block: must be in either graph, or the entry_block param")
+            if entry_block:
+                self.add_node_attribute(entry_block, "EntryBlock", True)
+            # TODO: Calculate and add all other needed attrs, e.g. LoopHeader, SelectionHeader, ExitBlock.
             self.graph = graph
         elif filepath:
             self.load(filepath)
@@ -188,11 +205,30 @@ class CFG:
         return nx.descendants(self.graph, node)
 
     def node_attributes(self, node):
-        if node in self.graph:
-            attrs = []
-            for attr, value in self.graph.nodes[node].items():
-                attrs.append(f"{attr}: {value}")
-            return attrs
+        if node not in self.graph:
+            raise RuntimeError(f"No node with id {node}")
+
+        attrs = []
+        for attr, value in self.graph.nodes[node].items():
+            attrs.append(f"{attr}: {value}")
+        return attrs
+
+    def add_node_attribute(self, node, attr_label: str, value: bool | int):
+        if node not in self.graph.nodes:
+            raise RuntimeError(f"Node {node} does not exist in the graph")
+        if attr_label in self.graph.nodes[node]:
+            raise RuntimeError(f"{attr_label} already in CFG")
+
+        self.graph.nodes[node][attr_label] = value
+
+    def update_node_attribute(self, node, attr_label: str, value: bool | int):
+        if node not in self.graph.nodes:
+            raise RuntimeError(f"Node {node} does not exist in the graph")
+        if attr_label not in self.graph.nodes[node]:
+            raise RuntimeError(f"Can't update {attr_label}: not in CFG")
+
+        self.graph.nodes[node][attr_label] = value
+
 
     # ... count ...
 
@@ -362,7 +398,7 @@ class CFG:
         for _ in range(MAX_ATTEMPTS):
 
             directions: list[int] = []
-            current_node = 1  # starting node TODO: update
+            current_node = self.entry_node()
 
             length_remaining = max_length
 
@@ -468,7 +504,6 @@ class CFG:
 
     def is_header_block(self, block) -> bool:
         return self.contains_merge_instruction(block)
-
 
     # TODO: Probably missing switch attrs or something
 

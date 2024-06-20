@@ -291,7 +291,9 @@ class ProgramBuilder:
 
     def build(self, with_edge_aggregation: bool = False):
         """Builds the WebAssembly Text (WAT) program."""
+        # TODO: Can remove the \t\t\t\t etc you have as handled by format_code()
         from .Program import Program  # Deferred import to avoid circular dependency
+        from CodeFormatter import format_code
 
         self._validate()
 
@@ -300,6 +302,8 @@ class ProgramBuilder:
         for node in self.cfg.nodes():
             self._add_node_code(node, with_edge_aggregation)
         self._end_of_program()
+
+        self.code = format_code(self.code)
 
         self.is_built = True
 

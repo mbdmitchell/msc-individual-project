@@ -178,21 +178,34 @@ def _get_node_data_2(root: ET.Element):
     w/ treating merge and continue edges as normal edges.
     """
 
-    block_attrs: dict[str, dict[str, bool | list[str]]] = {}
-
+    blocks_dict: dict[str, dict[str, bool | list[str]]] = {}
     block_labels = ["this/EntryBlock", "$this/exitBlocks"]
+
+    def add_blocks(label: str, include_label: bool):
+        blocks = _extract_blocks_with_label(root, label)
+        for b in blocks:
+            if b not in blocks_dict:
+                 blocks_dict[b] = {}
+            if include_label:
+                label_name = _standardise_label_name(label)
+                blocks_dict[b][label_name] = True
+
 
     for label in block_labels:
         blocks = _extract_blocks_with_label(root, label)
         for b in blocks:
-            if b not in block_attrs:
-                block_attrs[b] = {}
+            if b not in blocks_dict:
+                blocks_dict[b] = {}
             label_name = _standardise_label_name(label)
-            block_attrs[b][label_name] = True
+            blocks_dict[b][label_name] = True
 
-    # TODO NEXT: GET ALLLLLLL BLOCKS.
+    block_labels = ["this/LoopHeader", "this/SelectionHeader", "this/HeaderBlock",
+                    "this/Block", "this/SwitchBlock"]
 
-    return block_attrs
+    for label in block_labels:
+        add_blocks(label, include_label=False)
+
+    return blocks_dict
 
 
 def transform_labels(data, label_mapping):
@@ -216,7 +229,7 @@ def transform_labels(data, label_mapping):
 
 
 def alloy_to_cfg(xml_filepath: str, convert_to_wasm_friendly_cfg: bool = True) -> CFG:
-    """ NB: Two versions as merge and continue edges have no sensible analogue in WASM. """
+
     xml = ET.parse(xml_filepath)
     root = xml.getroot()
 

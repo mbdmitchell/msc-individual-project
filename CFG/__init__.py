@@ -7,4 +7,5 @@ from .example_CFGs \
     import example_cfg_if_else, \
     example_cfg_while_loop, \
     example_cfg_switch_while_combo, \
-    example_cfg_multigraph
+    example_cfg_multigraph, \
+    example_cfg_nested_switches
