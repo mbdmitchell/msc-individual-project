@@ -3,17 +3,37 @@
 
 const fs = require('fs');
 const path = require('path');
+const util = require('util');
 
-async function run_manual_cf(wasmPath) {
+const readFile = util.promisify(fs.readFile);
+
+async function fileExists(path) {
+    try {
+        await fs.promises.access(path);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function run_manual_cf(wasmPath, directionPath) {
+
+    const wasmFileExists = await fileExists(wasmPath);
+    const directionFileExists = await fileExists(directionPath);
+
+    if (!wasmFileExists) {
+        throw new Error(`WASM file not found: ${wasmPath}`);
+    }
+
+    if (!directionFileExists) {
+        throw new Error(`Direction file not found: ${directionPath}`);
+    }
 
     // CREATE INSTANCE
 
     // ... create importObject
 
     const memory = new WebAssembly.Memory({ initial: 1 });
-    const directionPath= path.resolve(path.dirname(wasmPath), 'directions.txt')
-
-    console.log("Directions:", directionPath)
 
     await populateMemoryBufferFromFile(memory, directionPath);
 
@@ -43,8 +63,8 @@ async function run_manual_cf(wasmPath) {
 
 async function populateMemoryBufferFromFile(memory, filePath) {
 
-    const directionsData = await fs.promises.readFile(filePath, 'utf8'); // [0,0,4,3] correct
-    const bufferValues = JSON.parse(directionsData); // [0,0,4,3] correct
+    const directionsData = await fs.promises.readFile(filePath, 'utf8');
+    const bufferValues = JSON.parse(directionsData);
     const buffer = new Uint32Array(memory.buffer);
 
     buffer.set(bufferValues);
@@ -58,4 +78,5 @@ async function printDetails(memoryArray) {
 }
 
 const filePath = process.argv[2];
-run_manual_cf(filePath).catch(console.error);
+const directionPath = process.argv[3];
+run_manual_cf(filePath, directionPath).catch(console.error);
