@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Optional
 import networkx as nx
 import pickle
-import pygraphviz
 
 from matplotlib import pyplot as plt
 
@@ -15,15 +14,14 @@ from threading import Lock
 # Lock for thread safety when saving images
 save_lock = Lock()
 
-
-class NodeType(Enum): # TODO: Depreciate. (Use node attributes)
-    def __repr__(self):
-        return f"<{self.__class__.__name__}.{self.name}: {self.value}>"
-
-    UNCONDITIONAL = 1
-    CONDITIONAL = 2
-    SWITCH = 3
-    END = 4
+# class NodeType(Enum):  # TODO: Depreciate. (Use node attributes)
+#     def __repr__(self):
+#         return f"<{self.__class__.__name__}.{self.name}: {self.value}>"
+#
+#     UNCONDITIONAL = 1
+#     CONDITIONAL = 2
+#     SWITCH = 3
+#     END = 4
 
 
 class CFGFormat(Enum):
@@ -40,6 +38,8 @@ class CFG:
     to provide a cleaner interface for CFGs and decouple rest of the project components
     from a specific graph implementation.
     """
+
+    # TODO: refactor to use DiGraph, a better fit
 
     def __init__(self, filepath: Optional[str] = None,
                  graph: Optional[nx.MultiDiGraph] = None,
@@ -59,13 +59,12 @@ class CFG:
         self.graph = nx.MultiDiGraph()
 
         if graph:
-            self.graph = graph
             # TODO: Ensure graph has no node attributes, except possibly EntryBlock
-            if not (entry_block or has_entry_block_attr(graph)):
+            self.graph = graph
+            if entry_block is None and not has_entry_block_attr(graph):
                 raise ValueError("No provided entry block: must be in either graph, or the entry_block param")
-            if entry_block:
+            if isinstance(entry_block, int):
                 self.add_node_attribute(entry_block, "EntryBlock", True)
-            # TODO: Calculate and add all other needed attrs, e.g. LoopHeader, SelectionHeader, ExitBlock.
             self.graph = graph
         elif filepath:
             self.load(filepath)
@@ -93,19 +92,6 @@ class CFG:
             # pos = nx.nx_agraph.graphviz_layout(cfg.graph, prog="twopi", root=1)
             pos = nx.spring_layout(cfg.graph)  # or any other layout algorithm
             nx.draw(cfg.graph, pos, with_labels=True, font_color='white')
-
-            """ TODO: 1) Fix the multi edge issue where many edges from n to m are represented w/ just one
-            2) eg. n <--> m displays only one edge label
-            # Generate edge labels with indices
-            edge_labels = {}
-            for node in cfg.graph.nodes():
-                out_edges = list(cfg.graph.out_edges(node))
-                if len(out_edges) > 1:  # the edges of nodes with out_degree <= 1 should have not label
-                    for idx, edge in enumerate(out_edges):
-                        edge_labels[edge] = str(idx)
-                        
-            nx.draw_networkx_edge_labels(cfg.graph, pos, edge_labels=edge_labels, font_color='red')
-            """
 
             plt.axis('off')
             plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0.1)
@@ -163,27 +149,43 @@ class CFG:
 
     # ... nodes ...
 
+    def is_basic_block(self, block) -> bool:
+        if block is None:
+            return False
+        return self.out_degree(block) == 1
+
+    def is_exit_block(self, block) -> bool:
+        if block is None:
+            return False
+        return self.out_degree(block) == 0
+
+    def is_selection_header(self, block) -> bool:
+        if block is None:
+            return False
+        return self.graph.nodes[block].get('SelectionHeader', False)
+
+    def is_loop_header(self, block) -> bool:
+        if block is None:
+            return False
+        return self.graph.nodes[block].get('LoopHeader', False)
+
     def nodes(self, data=False) -> list[int]:
         return self.graph.nodes(data)
 
-    def node_type(self, node: int):
-        no_of_children = len(self.children(node))  # don't use self.out_edges as can has multiple edges to same node
-        if no_of_children == 0:
-            return NodeType.END
-        elif no_of_children == 1:
-            return NodeType.UNCONDITIONAL
-        elif no_of_children == 2:
-            return NodeType.CONDITIONAL
-        else:
-            return NodeType.SWITCH
+    def is_merge_block(self, block: int):
+        """Return if block is a merge for any (header) node(s)"""
+        return any(self.graph.nodes[n].get("Merge") == block for n in self.nodes())
 
-    @staticmethod
-    def is_start_node(node: int):
-        # TODO: THIS IS WRONG NOW
-        return node == 1
+    def out_edges_destinations(self, block) -> list[int]:
+        return [e[1] for e in self.out_edges(block)]
 
-    def is_end_node(self, node: int):
-        return len(self.graph.out_edges(node)) == 0
+    def in_edges_sources(self, block) -> list[int]:
+        return [e[0] for e in self.in_edges_nx_count(block)]
+
+    def is_end_node(self, block: int):
+        if block is None:
+            return False
+        return len(self.graph.out_edges(block)) == 0
 
     def parents(self, node: int):
         return list(self.graph.predecessors(node))
@@ -192,11 +194,11 @@ class CFG:
         return list(self.graph.successors(node))
 
     def entry_node(self) -> int:
-        # TODO: if there is an entry_block label, use. Else...
-        return next((node for node in self.nodes() if not self.parents(node)), None)
-
-    def exit_nodes(self) -> list[int]:
-        return [node for node in self.nodes() if not self.children(node) and self.parents(node)]
+        nodes = self.nodes(data=True)
+        for n, data in nodes:
+            if 'EntryBlock' in data:
+                return n  # return the key of the node
+        raise ValueError("EntryBlock not found")
 
     def ancestors(self, node: int):
         return nx.ancestors(self.graph, node)
@@ -214,29 +216,43 @@ class CFG:
         return attrs
 
     def add_node_attribute(self, node, attr_label: str, value: bool | int):
+        # TODO: if attr not in {, , , , , ,} throw
         if node not in self.graph.nodes:
             raise RuntimeError(f"Node {node} does not exist in the graph")
         if attr_label in self.graph.nodes[node]:
-            raise RuntimeError(f"{attr_label} already in CFG")
+            raise RuntimeError(f"{attr_label} already in CFG node")
+        # TODO: If attr_label == Break & cont == TRUE in node, throw and vice versa
 
         self.graph.nodes[node][attr_label] = value
 
+    def _add_edge_attribute(self, edge, attr_label: str, value: bool | int):
+        # TODO: if attr not in {, , , , , ,} throw
+        if edge not in self.graph.edges:
+            raise RuntimeError(f"Edge {edge} does not exist in the graph")
+        if attr_label in self.graph.edges[edge]:
+            raise RuntimeError(f"{attr_label} already in CFG edge")
+        if len(edge) == 2:
+            edge = (*edge, 0)
+
+        self.graph.edges[edge][attr_label] = value
+
     def update_node_attribute(self, node, attr_label: str, value: bool | int):
+        # TODO: if attr not in {, , , , , ,} throw
         if node not in self.graph.nodes:
             raise RuntimeError(f"Node {node} does not exist in the graph")
         if attr_label not in self.graph.nodes[node]:
-            raise RuntimeError(f"Can't update {attr_label}: not in CFG")
+            raise RuntimeError(f"Can't update {attr_label}: not in CFG node")
 
         self.graph.nodes[node][attr_label] = value
 
+    def update_edge_attribute(self, edge, attr_label: str, value: bool | int):
+        # TODO: if attr not in {, , , , , ,} throw
+        if edge not in self.graph.edges:
+            raise RuntimeError(f"Edge {edge} does not exist in the graph")
+        if attr_label not in self.graph.edges[edge]:
+            raise RuntimeError(f"Can't update {attr_label}: not in CFG edge")
 
-    # ... count ...
-
-    def number_of_nodes(self) -> int:
-        return self.graph.number_of_nodes()
-
-    def number_of_edges(self) -> int:
-        return self.graph.number_of_edges()
+        self.graph.edges[edge][attr_label] = value
 
     # ... edges ...
 
@@ -245,30 +261,37 @@ class CFG:
     def out_edges(self, node: int) -> nx.classes.reportviews.OutMultiEdgeView:
         return self.graph.out_edges(node)
 
-    def in_edges(self, node: int) -> nx.classes.reportviews.InMultiEdgeView:
+    def in_edges_nx_count(self, node: int) -> nx.classes.reportviews.InMultiEdgeView:
         return self.graph.in_edges(node)
 
-    def out_degree(self, node: int) -> int:
+    def out_degree(self, block: int) -> int:
         """
         Returns out degree of node.
         NB: Safe to ignore "'int' object is not callable" warning
         """
-        return self.graph.out_degree(node)
+        if not self.contains_multi_edge(block):
+            return self.graph.out_degree(block)
+        return sum(
+            self.no_of_edges_represented_by_edge(e)
+            for e in self.graph.out_edges(nbunch=block)
+        )
 
-    def in_degree(self, node: int) -> int:
+    def in_degree(self, block: int) -> int:
         """
         Returns in degree of node.
         NB: Safe to ignore "'int' object is not callable" warning
         """
-        return self.graph.in_degree(node)
+        if not self.contains_multi_edge(block):
+            return self.graph.in_degree(block)
+        return sum(
+            self.no_of_edges_represented_by_edge(e)
+            for e in self.graph.in_edges(nbunch=block)
+        )
 
     # VALIDATE
 
     def is_reachable(self, source: int, destination: int) -> bool:
-        return nx.algorithms.has_path(self, source, destination)
-
-    def is_entry_or_exit_node(self, node: int) -> bool:
-        return CFG.is_start_node(node) or self.node_type(node) == NodeType.END
+        return nx.algorithms.has_path(self.graph, source, destination)
 
     # MANIPULATION
 
@@ -307,7 +330,7 @@ class CFG:
         """
         self.graph.add_nodes_from(nodes_to_add, **attr)
 
-    def add_children(self, children: list[int], node: int):
+    def add_successors(self, children: list[int], node: int):
         for child in children:
             self.graph.add_edge(node, child)  # NB: automatically adds child node if not in graph
 
@@ -332,66 +355,36 @@ class CFG:
         """
         self.graph.remove_edge(u, v, key)
 
-    # GENERATORS
+    def remove_edges_from(self, ebunch: list):
+        """Wrapper func
+        ebunch: list or container of edge tuples
+            Each edge given in the list or container will be removed
+            from the graph. The edges can be:
 
-    """
-    TODO: consider for generate_valid_cfg
-    YARPGen introduces the concept of generation policies [6] with the aim of increasing program diversity.
-    The main idea is to sample from different distributions when making decisions in the generator.
-
-    Additionally, YARPGen uses a technique known as parameter shuffling [6] where a random distribution is
-    used to seed the main distributions used for the generator’s decisions, before beginning the generation
-    process. This enables programs to have very different characteristics between executions of the generator.
-    """
-
-    @staticmethod
-    def generate_valid_cfg(seed: int = None) -> 'CFG':
+                - 2-tuples (u, v) A single edge between u and v is removed.
+                - 3-tuples (u, v, key) The edge identified by key is removed.
+                - 4-tuples (u, v, key, data) where data is ignored.
         """
-        NB: Currently, CFGs generated w/ this function don't include necessary labels for optimal CFG->code conversion.
-        Generate CFGs with Alloy model and use cfg = CFG().load(filepath='./alloy-cfgs/cfg2.xml', fmt=CFGFormat.ALLOY)
-        """
-        if seed is None:
-            seed = random.randint(0, 2 ** 32 - 1)
-        random.seed(seed)
+        self.graph.remove_edges_from(ebunch)
 
-        from .cfg_generator_OLD import generate_random_tree, \
-            reduce_no_of_exit_nodes_to_n, \
-            add_back_edges, \
-            add_forward_edges, \
-            add_self_loops
+    def _edge_index_to_dst_block(self, src_block: int, edge_ix: int):
 
-        # initial cfg
+        edges = self.graph.out_edges(nbunch=src_block)
 
-        tree_depth = random.choice(range(2, 6))
-        tree_max_children = random.choice(range(2, 6))
+        cumulative_count = -1
+        for true_edge_ix, edge in enumerate(edges):
+            cumulative_count += self.no_of_edges_represented_by_edge(edge)
+            if cumulative_count >= edge_ix:
+                return self.out_edges_destinations(src_block)[true_edge_ix]
 
-        cfg = generate_random_tree(target_depth=tree_depth, max_children_per_node=tree_max_children)
-
-        # assign parameters, all determined by seed
-
-        org_no_of_end_nodes = sum(1 for node in cfg.nodes() if cfg.node_type(node) == NodeType.END)
-
-        no_of_end_nodes = random.choice(range(1, 1 + org_no_of_end_nodes))
-        no_of_nodes = len(cfg.nodes())
-        no_of_back_edges = random.choice(range(0, 1 + no_of_nodes // 2))
-        no_of_forward_edges = random.choice(range(0, 1 + no_of_nodes // 2))
-        no_of_self_loops = random.choice(range(0, 1 + no_of_nodes // 4))
-
-        # transform
-
-        reduce_no_of_exit_nodes_to_n(cfg, no_of_end_nodes)
-        add_back_edges(cfg, no_of_back_edges)
-        add_forward_edges(cfg, no_of_forward_edges)
-        add_self_loops(cfg, no_of_self_loops)
-        # todo: MISC. RANDOM EDGES & CROSS EDGES
-
-        return cfg
+        raise IndexError("Index out of range")
 
     def generate_valid_input_directions(self, seed: int = None, max_length: int = 64) -> list[int]:
-
+        # TODO: add param to return n distinct valid_input_directions as list[list[int]]
         if seed is None:
             seed = random.randint(0, 2 ** 32 - 1)
         random.seed(seed)
+
 
         MAX_ATTEMPTS = 16
 
@@ -404,7 +397,7 @@ class CFG:
 
             while length_remaining > 0:
 
-                if self.node_type(current_node) == NodeType.END:
+                if self.is_end_node(current_node):
                     break
                 elif self.out_degree(current_node) == 1:
                     edge_index = 0
@@ -414,11 +407,11 @@ class CFG:
                     directions.append(edge_index)
                     length_remaining -= 1
 
-                _, dst = list(self.out_edges(current_node))[edge_index]
+                dst = self._edge_index_to_dst_block(current_node, edge_index)
                 current_node = dst
 
             # if directions results in full path, return
-            if self.node_type(current_node) == NodeType.END:
+            if self.is_end_node(current_node):
                 return directions
             else:
                 continue
@@ -430,7 +423,7 @@ class CFG:
 
     def expected_output_path(self, input_directions: list[int]) -> list[int]:
 
-        current_node = 1
+        current_node = self.entry_node()
         input_ix = 0
 
         path: list[int] = [current_node]
@@ -438,8 +431,7 @@ class CFG:
         length = len(input_directions)
 
         while input_ix <= length:
-
-            if self.node_type(current_node) == NodeType.END:
+            if self.is_end_node(current_node):
                 break
             elif self.out_degree(current_node) == 1:
                 edge_index = 0
@@ -447,48 +439,52 @@ class CFG:
                 edge_index = input_directions[input_ix]
                 input_ix += 1
 
-            _, current_node = list(self.out_edges(current_node))[edge_index]
+            current_node = self._edge_index_to_dst_block(current_node, edge_index)
 
             path.append(current_node)
 
-        if self.node_type(current_node) != NodeType.END and input_ix != len(input_directions):
-            raise RuntimeError("Error") # todo more descriptive
+        if not self.is_end_node(current_node) and input_ix != len(input_directions):
+            raise RuntimeError("Error")  # todo more descriptive
 
         return path
 
-    # ... block attributes + misc. details from alloy CFGs
+    def is_multi_edge(self, edge):
+        if not edge:
+            return False
+        if len(edge) == 2:
+            edge = (*edge, 0)  # internally, networkx multidigraph edges have three attrs
+        if edge not in self.graph.edges:
+            return False
+        multi_edge_value = self.graph.edges[edge].get("MultiEdge", None)
+        return isinstance(multi_edge_value, int)
 
-    def continue_attribute(self, block):
-        return self.graph.nodes[block]["Continue"]
+    def no_of_edges_represented_by_edge(self, edge):
+        if not self.is_multi_edge(edge):
+            return 1
+        if len(edge) == 2:
+            edge = (*edge, 0)  # internally, networkx multidigraph edges have three attrs
+        return self.graph.edges[edge].get("MultiEdge", None)
 
-    def contains_attribute(self, block):
-        return self.graph.nodes[block]["Contains"]
-
-    def structurally_dominates(self, block):
-        return set(self.graph.nodes[block]["StructurallyDominates"])
-
-    def strictly_structurally_dominates(self, block):
-        return set(self.graph.nodes[block]["StrictlyStructurallyDominates"])
-
-    def structurally_post_dominates(self, block):
-        return set(self.graph.nodes[block]["StructurallyPostDominates"])
-
-    def is_loop_header(self, block):
-        return self.graph.nodes[block].get("LoopHeader", False) is not False
-
-    def is_selection_header(self, block):
-        return self.graph.nodes[block].get("SelectionHeader", False) is not False
-
-    def is_switch_header(self, block):
+    def is_switch_block(self, block):
+        if not block:
+            return False
         return self.graph.nodes[block].get("SwitchBlock", False) is not False
-    def is_entry_block(self, block):
-        return self.graph.nodes[block].get("EntryBlock", False) is not False
 
-    def is_exit_block(self, block):
-        return self.graph.nodes[block].get("ExitBlock", False) is not False
+    def is_continue_block(self, block):
+        if block is None:
+            return False
+        is_cont = self.graph.nodes[block].get("ContinueBlock", False) is not False
+        if is_cont:
+            assert self.is_basic_block(block)
+        return is_cont
 
-    def is_basic_block(self, block):
-        return self.graph.nodes[block].get("Block", False) is not False
+    def is_break_block(self, block):
+        if block is None:
+            return False
+        is_br = self.graph.nodes[block].get("BreakBlock", False) is not False
+        if is_br:
+            assert self.is_basic_block(block)
+        return is_br
 
     def contains_merge_instruction(self, block):
         return self.graph.nodes[block].get("Merge") != []
@@ -496,14 +492,14 @@ class CFG:
     def merge_block(self, block):
         if not self.contains_merge_instruction(block):
             raise ValueError("No merge block")
-        block: list = self.graph.nodes[block]["Merge"]
-        return block[0]
-
-    def is_structurally_reachable(self, block) -> bool:
-        return self.graph.nodes[block].get("StructurallyReachableBlock", False) is not False
+        m_blk = self.graph.nodes[block]["Merge"]
+        return m_blk
 
     def is_header_block(self, block) -> bool:
-        return self.contains_merge_instruction(block)
+        if block is None:
+            return False
+        return self.is_selection_header(block) or self.is_loop_header(block)
 
-    # TODO: Probably missing switch attrs or something
+    def contains_multi_edge(self, block) -> bool:
+        return any(self.is_multi_edge(e) for e in self.graph.edges(nbunch=block))
 
