@@ -28,6 +28,7 @@ def format_code(code: str) -> str:
             current_indent -= 1
 
         indented_line = '\t' * current_indent + stripped_line
+        indented_line = indented_line.rstrip(' \t')
 
         if stripped_line in special_lines:
             indented_line = '\n' + indented_line
