@@ -95,9 +95,13 @@ class RelatedBlocksLoop:
         return self._merge_block
 
 
-def _generate_cfg(seed, depth, is_complex: bool, verbose=False, break_continue_probability=0.0):
+def _generate_cfg(seed, depth,
+                  is_complex: bool,
+                  allow_fallthrough: bool,
+                  verbose=False,
+                  break_continue_probability=0.0):
     random.seed(seed)
-    generator = CFGGenerator()._add_simple_cfg(depth)
+    generator = CFGGenerator()._add_simple_cfg(depth, allow_fallthrough)
     if is_complex:
         generator = generator._add_breaks_and_continues(break_continue_probability)
     cfg = generator.get_cfg()
@@ -196,13 +200,14 @@ class CFGGenerator:
 
         return RelatedBlocksSelection(false_block, true_block, merge_block)
 
-    def _make_switch(self, block_data: BlockData, no_of_branches) -> RelatedBlocksSwitch:
+    def _make_switch(self, block_data: BlockData, no_of_branches, allow_fallthrough: bool) -> RelatedBlocksSwitch:
         """ Add switch w/ possible fallthrough
         O-> ... O
                /\
               O O
               \/
               O
+        allow_fallthrough: required as some languages, e.g., WGSL don't allow it
         """
 
         block = block_data.block()
@@ -218,7 +223,11 @@ class CFGGenerator:
 
             self._cfg.add_edge(block, cases[ix])
 
-            fallthrough = random.choice([True, False])
+            if allow_fallthrough:
+                fallthrough = random.choice([True, False])
+            else:
+                fallthrough = False
+
             if fallthrough:
                 if ix + 1 in range(len(cases)):
                     target = cases[ix + 1]
@@ -267,17 +276,17 @@ class CFGGenerator:
 
         return RelatedBlocksLoop(true_block, merge_block)
 
-    def _build_rand_construct(self, block_data: BlockData):
+    def _build_rand_construct(self, block_data: BlockData, allow_fallthrough: bool):
         choice = random.choice([self._make_selection, self._make_loop, self._make_switch, self._make_basic])
         if choice == self._make_switch:
-            return choice(block_data, random.randint(2, 4))
+            return choice(block_data, random.randint(2, 4), allow_fallthrough)
         else:
             return choice(block_data)
 
     def get_cfg(self):
         return self._cfg
 
-    def _add_simple_cfg(self, depth):
+    def _add_simple_cfg(self, depth, allow_fallthrough: bool):
         """Loops, selections, and switches. No continues, breaks, self-loops, or multiedges."""
         blocks = queue.Queue()
         blocks.put(BlockData(block=1, outer_merge=None, outer_header=None, current_depth=0))
@@ -289,7 +298,7 @@ class CFGGenerator:
             if block_data.current_depth() < depth:
                 if block_data.block() in self.visited_blocks:
                     continue
-                next_blocks = self._build_rand_construct(block_data)
+                next_blocks = self._build_rand_construct(block_data, allow_fallthrough)
                 self._visit(block_data.block())
                 for nb in next_blocks:
                     if nb in self.visited_blocks:
@@ -379,14 +388,15 @@ class CFGGenerator:
 
         return self
 
-    def generate_simple(self, seed, depth, verbose=False):
-        return _generate_cfg(seed, depth, is_complex=False, verbose=verbose)
+    def generate_simple(self, seed, depth, allow_fallthrough: bool, verbose=False):
+        return _generate_cfg(seed, depth, is_complex=False, allow_fallthrough=allow_fallthrough, verbose=verbose)
 
-    def generate_complex(self, seed, depth, break_continue_probability: float, verbose=False):
+    def generate_complex(self, seed, depth, allow_fallthrough: bool, break_continue_probability: float, verbose=False):
         return _generate_cfg(
             seed=seed,
             depth=depth,
             is_complex=True,
+            allow_fallthrough=allow_fallthrough,
             break_continue_probability=break_continue_probability,
             verbose=verbose
         )
