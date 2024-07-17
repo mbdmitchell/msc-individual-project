@@ -1,14 +1,17 @@
-def format_code(code: str) -> str:
+def format_code(code: str, add_line_above=None, deliminators=('{', '}'), comment_marker=';;', ) -> str:
+    if add_line_above is None:
+        padded_lines = []
+
+    open_delim = deliminators[0]
+    closed_delim = deliminators[1]
 
     def bracket_count_difference(line: str):
         """Return the number of `(` minus the number of `)`, ignoring all characters after ';;'."""
-        # Ignore characters after ';;' (comments)
-        comment_index = line.find(';;')
+        # Ignore characters after comment_marker
+        comment_index = line.find(comment_marker)
         if comment_index != -1:
             line = line[:comment_index]
-        return line.count('(') - line.count(')')
-
-    special_lines = [";; setup", ";; control flow code"]
+        return line.count(open_delim) - line.count(closed_delim)
 
     lines = code.split('\n')
     formatted_lines = []
@@ -21,7 +24,7 @@ def format_code(code: str) -> str:
         if not stripped_line:
             continue
 
-        just_closed_bracket: bool = stripped_line[0] == ')'
+        just_closed_bracket: bool = stripped_line[0] == closed_delim
 
         # Temp adjust indentation
         if just_closed_bracket:
@@ -30,8 +33,9 @@ def format_code(code: str) -> str:
         indented_line = '\t' * current_indent + stripped_line
         indented_line = indented_line.rstrip(' \t')
 
-        if stripped_line in special_lines:
+        if any(stripped_line.startswith(prefix) for prefix in add_line_above):
             indented_line = '\n' + indented_line
+
 
         formatted_lines.append(indented_line)
 
