@@ -1,5 +1,4 @@
 // e.g. % node run_manual_cf.js example.wasm
-// TODO: Low priority, reimplement in Python
 
 const fs = require('fs');
 const path = require('path');
@@ -16,7 +15,7 @@ async function fileExists(path) {
     }
 }
 
-async function run_manual_cf(wasmPath, directionPath) {
+async function run_wasm(wasmPath, directionPath) {
 
     const wasmFileExists = await fileExists(wasmPath);
     const directionFileExists = await fileExists(directionPath);
@@ -79,4 +78,4 @@ async function printDetails(memoryArray) {
 
 const filePath = process.argv[2];
 const directionPath = process.argv[3];
-run_manual_cf(filePath, directionPath).catch(console.error);
+run_wasm(filePath, directionPath).catch(console.error);
