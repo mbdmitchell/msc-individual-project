@@ -74,7 +74,7 @@ class WGSLCodeBuilder(CodeBuilder):
             next_case = default if ix_ + 1 == len(cases) else cases[ix_ + 1]
 
             # WGSL doesn't accept switches w/ fallthrough
-            assert not self._is_fallthrough(block, merge_blocks, current_case, next_case)
+            assert not self._there_is_path_not_using_loop(block, merge_blocks, current_case, next_case)
 
             return """
             case {ix}: {{

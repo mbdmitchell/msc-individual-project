@@ -118,7 +118,7 @@ class CodeBuilder(ABC):
 
     # ===================================================================
 
-    def _is_fallthrough(self, block, merge_blocks, current_case_block, next_case_block):
+    def _there_is_path_not_using_loop(self, block, merge_blocks, current_case_block, next_case_block):
         is_loop_header_present = any(self.cfg.is_loop_header(bk.related_header) for bk in merge_blocks)
 
         if is_loop_header_present:
@@ -227,6 +227,7 @@ class CodeBuilder(ABC):
                                             switch_label_num=0,
                                             next_case_block=None)
 
-        code = self._format_code(self._full_program(raw_code))
+        program: str = self._full_program(raw_code)
+        formatted_program: str = self._format_code(program)
 
-        return code
+        return formatted_program

@@ -208,10 +208,10 @@ class WebAssemblyCodeBuilder(CodeBuilder):
 
             logger.info(f"Fallthrough test: Finding path from {cases[ix_]} to {next_case_block_}...")
 
-            is_fallthrough = self._is_fallthrough(block=block,
-                                                  merge_blocks=merge_blocks,
-                                                  current_case_block=cases[ix_],
-                                                  next_case_block=next_case_block_)
+            is_fallthrough = self._there_is_path_not_using_loop(block=block,
+                                                                merge_blocks=merge_blocks,
+                                                                current_case_block=cases[ix_],
+                                                                next_case_block=next_case_block_)
             if is_fallthrough:
                 end_block = next_case_block_
             else:
@@ -247,7 +247,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
                    code=code_str,
                    target_code=self.code_in_block_range(
                        block=default,
-                       end_block=end_block,
+                       end_block=end_block_,
                        merge_blocks=merge_blocks,
                        switch_label_num=next_label_num,
                        next_case_block=next_case_block),

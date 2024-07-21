@@ -20,5 +20,7 @@ class WGSLProgram(Program):
         with open(source_code_path, "w") as file:
             file.write(self.get_code())
 
+        self._file_path = source_code_path
+
         if verbose:
             print("Saved to {path}".format(path=source_code_path))
