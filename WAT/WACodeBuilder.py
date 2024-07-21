@@ -235,6 +235,17 @@ class WebAssemblyCodeBuilder(CodeBuilder):
                                possible_switch_break=build_switch_break(cases[ix_], is_fallthrough))
 
         def add_default(code_str) -> str:
+
+            # if true, it's not a true merge (in the sense that blocks from other cases can't reach it)
+            if default == merge_blocks[-1].merge_block:
+                nearest_loop_header = next((b.related_header for b in merge_blocks[-2::-1]
+                                            if self.cfg.is_loop_header(b.related_header)), None)
+
+                end_block_ = nearest_loop_header
+            else:
+                end_block_ = self.cfg.merge_block(block)
+
+
             return """
                 {cntrl}
                 (block {switch_block_label}
