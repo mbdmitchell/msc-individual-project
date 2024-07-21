@@ -3,12 +3,12 @@
 from abc import ABC, abstractmethod
 from CFG import *
 
-
 class Program(ABC):
     def __init__(self, cfg):
         self._code = None
         self.cfg = cfg
         self.has_binary_format: bool
+        self._file_path = None
 
     def get_code(self) -> str:
         return self._code
@@ -20,3 +20,9 @@ class Program(ABC):
             return existing_code == self._code
         except FileNotFoundError:
             return False
+
+    def get_file_path(self) -> str:
+        if not self._file_path:
+            raise ValueError("Program hasn't been saved. No filepath")
+        else:
+            return self._file_path
