@@ -13,8 +13,22 @@ class WGSLCodeBuilder(CodeBuilder):
     def __init__(self, cfg: CFG):
         super().__init__(cfg)
 
-    @staticmethod
-    def _full_program(control_flow_code: str):
+    def _prevent_discarding_bindings(self) -> str:
+        """WGSL silently discards bindings not used by the shader, then throws an error because of a mismatch between
+        no. of bindings in bind group descriptor and the no. in the bind group layout.
+
+        This adds a statement to use the input_data binding iff unused in the shader
+        (e.g., A CFG w/ no selection headers)
+        """
+
+        is_input_data_unused = all(not self.cfg.is_header_block(node) for node in self.cfg.nodes())
+
+        if is_input_data_unused:
+            return "var use_input_data = input_data[0];"
+        else:
+            return ''
+
+    def _full_program(self, control_flow_code: str):
         """Wrap control_flow_code in the code needed to emit a full compute shader"""
         return """
     @group(0) @binding(0) var<storage, read_write> input_data: array<i32>;
@@ -26,9 +40,11 @@ class WGSLCodeBuilder(CodeBuilder):
         var output_ix: i32 = 0;
         var cntrl_val: i32;
         
+        {prevent_discarding_unused_bindings}
         {control_flow_code}
     }}
-    """.format(control_flow_code=control_flow_code)
+    """.format(control_flow_code=control_flow_code,
+               prevent_discarding_unused_bindings=self._prevent_discarding_bindings())
 
     @staticmethod
     def _set_and_increment_control():
@@ -43,7 +59,10 @@ class WGSLCodeBuilder(CodeBuilder):
 
     @staticmethod
     def _break_code() -> str:
-        return 'break;\n'
+        return """
+        cntrl_val = -1;
+		continue; // 'break' breaks from switch, not loop. This code is cleaner for the latter.
+        """
 
     @staticmethod
     def _exit_code() -> str:
@@ -131,13 +150,19 @@ class WGSLCodeBuilder(CodeBuilder):
         header block aren't represented as conditional expressions."""
 
         return """
-        while true {{
+        {cntrl}
+        loop {{
             {loop_header}
-            {cntrl}
             if cntrl_val != 1 {{
                 break;
             }}
             {loop_body}
+            continuing {{
+                if cntrl_val != -1 {{
+                    {cntrl}
+                }} 
+                break if cntrl_val == -1; // way to break out of a loop while in a switch (`break` in a switch just leaves switch)
+            }}
         }}
         """
 
@@ -149,7 +174,6 @@ class WGSLCodeBuilder(CodeBuilder):
             }}"""
 
     def _calc_else_block_code(self, block, merge_blocks, next_case_block, switch_label_num) -> str:
-        """Override base class"""
 
         # when True, the false branch doesn't go straight to merge block
         dst = self.cfg.out_edges_destinations(block)
