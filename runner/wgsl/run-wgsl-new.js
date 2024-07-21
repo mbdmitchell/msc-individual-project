@@ -17,7 +17,7 @@ async function fileExists(filePath) {
     }
 }
 
-async function main(abs_code_filepath, directions_path){
+async function test(shaderPath, input){
 
     const adapter = await navigator.gpu?.requestAdapter();
     const device = await adapter?.requestDevice();
@@ -27,29 +27,11 @@ async function main(abs_code_filepath, directions_path){
         return;
     }
 
-    const shaderPath = abs_code_filepath;
-    const directionPath = directions_path;
-
-    const [shaderFileExists, directionFileExists] = await Promise.all([
-        fileExists(shaderPath),
-        fileExists(directionPath)
-    ]);
-
-    if (!shaderFileExists) {
+    if (!fileExists(shaderPath)) {
         throw new Error(`WGSL file not found: ${shaderPath}`);
     }
 
-    if (!directionFileExists) {
-        throw new Error(`Direction file not found: ${directionPath}`);
-    }
-
-    const [directionsData, shader] = await Promise.all([
-        fs.promises.readFile(directionPath, 'utf-8'),
-        fs.promises.readFile(shaderPath, 'utf-8'),
-    ]);
-
-    const bufferValues = JSON.parse(directionsData);
-    const input = new Uint32Array(bufferValues);
+    const shader = await fs.promises.readFile(shaderPath, 'utf-8');
 
     const module = device.createShaderModule({
         label: 'control flow compute module',
@@ -64,7 +46,7 @@ async function main(abs_code_filepath, directions_path){
         },
     });
 
-    // Create a buffer on the GPU to hold our computation input
+    // Create a buffer on the GPU
     const inputBuffer = device.createBuffer({
         label: 'input buffer',
         size: input.byteLength,
@@ -118,6 +100,7 @@ async function main(abs_code_filepath, directions_path){
     await resultBuffer.mapAsync(GPUMapMode.READ);
     const mappedRange = new Int32Array(resultBuffer.getMappedRange());
     const resultArray = Array.from(mappedRange);
+
     const result = resultArray.slice(0, resultArray.indexOf(0));
 
     resultBuffer.unmap();
@@ -126,6 +109,8 @@ async function main(abs_code_filepath, directions_path){
 
 }
 
-abs_code_filepath = process.argv[2]
-directions_path = process.argv[3]
-main(abs_code_filepath, directions_path).catch(console.error);
+shaderPath = process.argv[2]
+input = new Uint32Array(JSON.parse(process.argv[3]))
+
+
+test(shaderPath, input).catch(console.error);
