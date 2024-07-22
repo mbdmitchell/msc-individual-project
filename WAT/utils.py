@@ -22,7 +22,7 @@ def optimise_wasm(unoptimised_wasm_filepath: str, opt_option: str, verbose=False
         f"-{opt_option}"
     ]
 
-    result = subprocess.run(command, capture_output=True, text=True)
+    result = run_subprocess(command)
 
     if verbose:
         if result.returncode == 0:
