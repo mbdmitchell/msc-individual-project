@@ -1,5 +1,7 @@
 import os
 import subprocess
+
+from Language import Language
 from Program import Program
 import CFG
 from WAT import WACodeBuilder
@@ -10,6 +12,7 @@ class WebAssemblyProgram(Program):
         super().__init__(cfg)
         self.builder = WACodeBuilder.WebAssemblyCodeBuilder(cfg)
         self._code = self.builder.build_code()
+        self.language = Language.WASM
 
     @staticmethod
     def compile(source_code_path, target_binary_path):
@@ -30,6 +33,7 @@ class WebAssemblyProgram(Program):
         if not save_as_executable:
             with open(source_code_path, "w") as file:
                 file.write(self.get_code())
+            self._file_path = source_code_path
 
         else:
             if not source_code_file_already_existed or not up_to_date:
@@ -40,6 +44,8 @@ class WebAssemblyProgram(Program):
 
             if not source_code_file_already_existed:
                 os.remove(source_code_path)
+
+            self._file_path = binary_path
 
         if verbose:
             print("Saved to {path}".format(path=binary_path if save_as_executable else source_code_path))

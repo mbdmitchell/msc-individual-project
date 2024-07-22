@@ -1,8 +1,10 @@
 import os
+import CFG
+
 from enum import Enum
 
+from Language import Language
 from Program import Program
-import CFG
 from GLSL import GLSLCodeBuilder
 
 def _list_to_space_separated_values(values: list[int]) -> str:
@@ -74,6 +76,7 @@ class GLSLProgram(Program):
         super().__init__(cfg)
         self.builder = GLSLCodeBuilder.GLSLCodeBuilder(cfg)
         self._code = self.builder.build_code()
+        self.language = Language.GLSL
 
     def generate_shader_test(self, input_directions, expected_path) -> str:
         return _generate_shader_test_aux(

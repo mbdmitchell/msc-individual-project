@@ -1,5 +1,6 @@
 import os
 
+from Language import Language
 from Program import Program
 import CFG
 from WGSL import WGSLCodeBuilder
@@ -9,6 +10,7 @@ class WGSLProgram(Program):
         super().__init__(cfg)
         self.builder = WGSLCodeBuilder.WGSLCodeBuilder(cfg)
         self._code = self.builder.build_code()
+        self.language = Language.WGSL
 
     def save(self, file_path, verbose=False):
         directory = os.path.dirname(file_path)

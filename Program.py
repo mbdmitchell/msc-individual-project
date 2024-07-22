@@ -3,12 +3,14 @@
 from abc import ABC, abstractmethod
 from CFG import *
 
+
 class Program(ABC):
     def __init__(self, cfg):
         self._code = None
         self.cfg = cfg
         self.has_binary_format: bool
         self._file_path = None
+        self.language = None
 
     def get_code(self) -> str:
         return self._code
@@ -26,3 +28,6 @@ class Program(ABC):
             raise ValueError("Program hasn't been saved. No filepath")
         else:
             return self._file_path
+
+    def get_language(self):
+        return self.language
