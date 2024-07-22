@@ -1,5 +1,16 @@
-import subprocess
 import os
+from runner.utils import run_subprocess
+
+
+def validate_wasm(abs_code_filepath):
+    validate_command = ['wasm-validate', '--enable-multi-memory', abs_code_filepath]
+    is_valid, validate_output = run_subprocess(validate_command)
+
+    if not is_valid:
+        return False, f"Invalid wasm module (`wasm-validate`) {abs_code_filepath}"
+
+    return is_valid, ''
+
 
 def optimise_wasm(unoptimised_wasm_filepath: str, opt_option: str, verbose=False):
     """Generate optimised wasm binary"""
@@ -30,3 +41,12 @@ def optimise_wasm(unoptimised_wasm_filepath: str, opt_option: str, verbose=False
         else:
             print(f"Optimization failed with return code {result.returncode}")
             print(result.stderr)
+
+def run_wasm(abs_code_filepath, directions_path, output_path):
+    command_successful, msg = run_subprocess(
+        ['node', '../runner/run_wasm.js', abs_code_filepath, directions_path],
+        output_path,
+        redirect_output=True,  # Set to True to use direct redirection
+        verbose=True
+    )
+    return command_successful, msg

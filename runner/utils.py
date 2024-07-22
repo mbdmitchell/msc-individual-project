@@ -1,10 +1,7 @@
 import concurrent.futures
-import os
 import subprocess
 import time
 
-from CFG import CFG
-from WAT import WebAssemblyProgram
 from threading import Lock
 
 print_lock = Lock()
