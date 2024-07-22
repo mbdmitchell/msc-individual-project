@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from CFG import *
-from utils import format_code
 
 from CodeBuilder import CodeBuilder
 from MergeBlockData import MergeBlockData
@@ -290,6 +289,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
 
     @staticmethod
     def _format_code(code: str) -> str:
+        from utils import format_code
         return format_code(
             code=code,
             add_line_above=[";; setup", ";; control flow code"],

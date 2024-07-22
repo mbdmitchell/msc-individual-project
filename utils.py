@@ -1,6 +1,11 @@
-def format_code(code: str, add_line_above=None, deliminators=('{', '}'), comment_marker=';;', ) -> str:
-    if add_line_above is None:
-        padded_lines = []
+from enum import Enum
+
+from Language import Language
+from WAT import WebAssemblyProgram
+from GLSL import GLSLProgram
+from WGSL import WGSLProgram
+
+def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_marker=';;', ) -> str:
 
     open_delim = deliminators[0]
     closed_delim = deliminators[1]

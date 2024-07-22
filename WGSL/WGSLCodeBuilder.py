@@ -6,7 +6,6 @@ from CFG import *
 
 from CodeBuilder import CodeBuilder
 from MergeBlockData import MergeBlockData
-from utils import format_code
 
 class WGSLCodeBuilder(CodeBuilder):
 
@@ -225,6 +224,7 @@ class WGSLCodeBuilder(CodeBuilder):
 
     @staticmethod
     def _format_code(code: str) -> str:
+        from utils import format_code
         return format_code(code=code,
                            add_line_above=['@compute'],
                            deliminators=('{', '}'),
