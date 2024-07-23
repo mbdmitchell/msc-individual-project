@@ -14,16 +14,6 @@ from threading import Lock
 # Lock for thread safety when saving images
 save_lock = Lock()
 
-# class NodeType(Enum):  # TODO: Depreciate. (Use node attributes)
-#     def __repr__(self):
-#         return f"<{self.__class__.__name__}.{self.name}: {self.value}>"
-#
-#     UNCONDITIONAL = 1
-#     CONDITIONAL = 2
-#     SWITCH = 3
-#     END = 4
-
-
 class CFGFormat(Enum):
     CFG = 0,
     NX_MULTI_DIGRAPH = 1,
