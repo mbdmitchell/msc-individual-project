@@ -13,10 +13,10 @@ class WGSLCodeBuilder(CodeBuilder):
         super().__init__(cfg)
 
     def _prevent_discarding_bindings(self) -> str:
-        """WGSL silently discards bindings not used by the shader, then throws an error because of a mismatch between
-        no. of bindings in bind group descriptor and the no. in the bind group layout.
+        """WGSL silently discards bindings not used by the shader, then throws an error because it's missing the binding
+        it just threw away.
 
-        This adds a statement to use the input_data binding iff unused in the shader
+        This function adds a statement to use the input_data binding iff unused in the shader
         (e.g., A CFG w/ no selection headers)
         """
 
@@ -192,35 +192,25 @@ class WGSLCodeBuilder(CodeBuilder):
             switch_label_num=switch_label_num)
         )
 
-    def _selection_code(self,
-                        block: int | None,
-                        end_block: int | None,
-                        merge_blocks: list[MergeBlockData],
-                        switch_label_num: int,
-                        next_case_block: int = None) -> str:
-
-        true_branch_block = self.cfg.out_edges_destinations(block)[1]
-        merge_block = self.cfg.merge_block(block)
-
+    def _selection_str(self, true_branch_block, merge_block, block, merge_blocks, next_case_block, switch_label_num):
         return """
-                {cntrl}
-                if (cntrl_val == 1) {{
-                    {true_block_code}
-                }}
-                {possible_else}
-                """.format(cntrl=self._set_and_increment_control(),
-                           possible_else=self._calc_else_block_code(
-                                block=block,
-                                merge_blocks=merge_blocks,
-                                next_case_block=next_case_block,
-                                switch_label_num=switch_label_num),
-                           true_block_code=self.code_in_block_range(
-                               block=true_branch_block,
-                               end_block=merge_block,
-                               merge_blocks=merge_blocks,
-                               next_case_block=next_case_block,
-                               switch_label_num=switch_label_num)
-                           )
+            {cntrl}
+            if (cntrl_val == 1) {{
+                {true_block_code}
+            }}
+            {possible_else}""".format(cntrl=self._set_and_increment_control(),
+                                      possible_else=self._calc_else_block_code(
+                                          block=block,
+                                          merge_blocks=merge_blocks,
+                                          next_case_block=next_case_block,
+                                          switch_label_num=switch_label_num),
+                                      true_block_code=self.code_in_block_range(
+                                          block=true_branch_block,
+                                          end_block=merge_block,
+                                          merge_blocks=merge_blocks,
+                                          next_case_block=next_case_block,
+                                          switch_label_num=switch_label_num)
+                                      )
 
     @staticmethod
     def _format_code(code: str) -> str:

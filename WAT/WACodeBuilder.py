@@ -138,16 +138,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
             )
         """
 
-    def _selection_code(self,
-                        block: int | None,
-                        end_block: int | None,
-                        merge_blocks: list[MergeBlockData],
-                        switch_label_num: int,
-                        next_case_block: int = None) -> str:
-
-        true_branch_block = self.cfg.out_edges_destinations(block)[1]
-        merge_block = self.cfg.merge_block(block)
-
+    def _selection_str(self, true_branch_block, merge_block, block, merge_blocks, next_case_block, switch_label_num):
         return """
             {cntrl}
             (if (i32.eq (local.get $control_val) (i32.const 1))

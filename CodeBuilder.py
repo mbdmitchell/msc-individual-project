@@ -108,13 +108,22 @@ class CodeBuilder(ABC):
                 switch_label_num=switch_label_num)
         )
 
+    @abstractmethod
+    def _selection_str(self, true_branch_block, merge_block, block, merge_blocks, next_case_block, switch_label_num):
+        pass
+
     def _selection_code(self,
                         block: int | None,
                         end_block: int | None,
                         merge_blocks: list[MergeBlockData],
                         switch_label_num: int,
                         next_case_block: int = None) -> str:
-        pass
+
+        true_branch_block = self.cfg.out_edges_destinations(block)[1]
+        merge_block = self.cfg.merge_block(block)
+
+        return self._selection_str(true_branch_block, merge_block, block, merge_blocks, next_case_block,
+                                   switch_label_num)
 
     # ===================================================================
 

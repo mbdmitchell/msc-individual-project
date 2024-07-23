@@ -7,13 +7,14 @@ from CFG import *
 from CodeBuilder import CodeBuilder
 from MergeBlockData import MergeBlockData
 
+
 class GLSLCodeBuilder(CodeBuilder):
 
     def __init__(self, cfg: CFG):
         super().__init__(cfg)
 
     def _full_program(self, control_flow_code: str) -> str:
-        return"""
+        return """
         #version 450
 
         layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
@@ -123,7 +124,6 @@ class GLSLCodeBuilder(CodeBuilder):
             else:
                 end_block_ = self.cfg.merge_block(block)
 
-
             return """
             default: {{
                 {default_code}
@@ -143,6 +143,7 @@ class GLSLCodeBuilder(CodeBuilder):
             }}""".format(cntrl=self._set_and_increment_control(),
                          cases=add_cases(),
                          default=add_default())
+
     @staticmethod
     def _loop_code_str() -> str:
         """Odd structure required to represent while(loop_header){loop_body...}
@@ -186,35 +187,25 @@ class GLSLCodeBuilder(CodeBuilder):
             switch_label_num=switch_label_num)
         )
 
-    def _selection_code(self,
-                        block: int | None,
-                        end_block: int | None,
-                        merge_blocks: list[MergeBlockData],
-                        switch_label_num: int,
-                        next_case_block: int = None) -> str:
-
-        true_branch_block = self.cfg.out_edges_destinations(block)[1]
-        merge_block = self.cfg.merge_block(block)
-
+    def _selection_str(self, true_branch_block, merge_block, block, merge_blocks, next_case_block, switch_label_num):
         return """
-                {cntrl}
-                if (cntrl_val == 1) {{
-                    {true_block_code}
-                }}
-                {possible_else}
-                """.format(cntrl=self._set_and_increment_control(),
-                           possible_else=self._calc_else_block_code(
-                               block=block,
-                               merge_blocks=merge_blocks,
-                               next_case_block=next_case_block,
-                               switch_label_num=switch_label_num),
-                           true_block_code=self.code_in_block_range(
-                               block=true_branch_block,
-                               end_block=merge_block,
-                               merge_blocks=merge_blocks,
-                               next_case_block=next_case_block,
-                               switch_label_num=switch_label_num)
-                           )
+            {cntrl}
+            if (cntrl_val == 1) {{
+                {true_block_code}
+            }}
+            {possible_else}""".format(cntrl=self._set_and_increment_control(),
+                                      possible_else=self._calc_else_block_code(
+                                          block=block,
+                                          merge_blocks=merge_blocks,
+                                          next_case_block=next_case_block,
+                                          switch_label_num=switch_label_num),
+                                      true_block_code=self.code_in_block_range(
+                                          block=true_branch_block,
+                                          end_block=merge_block,
+                                          merge_blocks=merge_blocks,
+                                          next_case_block=next_case_block,
+                                          switch_label_num=switch_label_num)
+                                      )
 
     @staticmethod
     def _format_code(code: str) -> str:

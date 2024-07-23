@@ -5,8 +5,6 @@ from itertools import product
 
 import pytest
 import tempfile
-import CFG
-import GLSL
 import WAT
 import WGSL
 from CFG.CFGGenerator import CFGGenerator
