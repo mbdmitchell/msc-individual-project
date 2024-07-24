@@ -12,11 +12,6 @@ def _list_to_space_separated_values(values: list[int]) -> str:
 
 def _generate_shader_test_aux(shader_code, input_directions, expected_path) -> str:
 
-    def round_up_to_nearest_power_of_2(n: int) -> int:
-        if n < 1:
-            return 1
-        return 1 << (n - 1).bit_length()
-
     path_buffer_size = len(expected_path) + 1  # +1 so can detect if somehow actual_path starts identically to expected_path but has extra elems
     path_buffer_size_in_bytes = path_buffer_size * 4  # 32-bit uints
     directions_size_in_bytes = len(input_directions) * 4
