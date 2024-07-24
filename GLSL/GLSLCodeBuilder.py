@@ -63,14 +63,9 @@ class GLSLCodeBuilder(CodeBuilder):
         // -----------------------
         """.format(n=n)
 
-    def _build_switch_break(self, target: int, is_fallthrough_: bool):
-        c1 = is_fallthrough_  # leaves scope of current case block and fall into scope of next => no switch_break
-        c2 = self.cfg.is_exit_block(target)  # "(return)" added later => no switch_break
-        c3 = self.cfg.is_continue_block(target) or self.cfg.is_break_block(target)  # relevant. added later => no SB
-        if c1 or c2 or c3:
-            return ""
-        else:
-            return "break;"
+    @staticmethod
+    def _switch_label(switch_label: str = None):
+        return "break;"
 
     def _switch_code(self,
                      block: int | None,  # TODO: remove code duplication between GLSL and WGSLCodeBuilder
@@ -105,7 +100,7 @@ class GLSLCodeBuilder(CodeBuilder):
                            merge_blocks=merge_blocks,
                            switch_label_num=switch_label_num,
                            next_case_block=next_case_block),
-                       possible_switch_break=self._build_switch_break(current_case, is_fallthrough))
+                       possible_switch_break=self.switch_break_str(current_case, is_fallthrough))
 
         def add_cases() -> str:
             cases_ = str()
@@ -166,26 +161,6 @@ class GLSLCodeBuilder(CodeBuilder):
             else {{
                 {false_block}
             }}"""
-
-    def _calc_else_block_code(self, block, merge_blocks, next_case_block, switch_label_num) -> str:
-
-        # when True, the false branch doesn't go straight to merge block
-        dst = self.cfg.out_edges_destinations(block)
-        false_branch_block = dst[0]
-        merge_block = self.cfg.merge_block(block)
-
-        is_if_else_statement = false_branch_block != merge_blocks[0].merge_block
-
-        if not is_if_else_statement:
-            return ""
-
-        return self._else_code_str().format(false_block=self.code_in_block_range(
-            block=false_branch_block,
-            end_block=merge_block,
-            merge_blocks=merge_blocks,
-            next_case_block=next_case_block,
-            switch_label_num=switch_label_num)
-        )
 
     def _selection_str(self, true_branch_block, merge_block, block, merge_blocks, next_case_block, switch_label_num):
         return """

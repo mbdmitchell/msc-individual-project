@@ -160,6 +160,10 @@ class WebAssemblyCodeBuilder(CodeBuilder):
                             switch_label_num=switch_label_num)
                         )
 
+    @staticmethod
+    def _switch_label(switch_label_: str = None) -> str:
+        return "(br {switch_label})".format(switch_label=switch_label_)
+
     def _switch_code(self,
                      block: int | None,  # TODO: rename to header, no???
                      end_block: int | None,  # TODO: remove end_block from all _n_code functions?!
@@ -182,15 +186,6 @@ class WebAssemblyCodeBuilder(CodeBuilder):
             br_table += f'{default_br_index}\t ;; default => (br {default_br_index})\n'  # add default
 
             return br_table
-
-        def build_switch_break(target: int, is_fallthrough_: bool):
-            c1 = is_fallthrough_  # leaves scope of current case block and fall into scope of next => no switch_break
-            c2 = self.cfg.is_exit_block(target)  # "(return)" added later => no switch_break
-            c3 = self.cfg.is_continue_block(target) or self.cfg.is_break_block(target)  # relevant. added later => no SB
-            if c1 or c2 or c3:
-                return ""
-            else:
-                return "(br {switch_label})".format(switch_label=switch_label)
 
         def add_case(ix_: int, code_str) -> str:
             """Return code_str + new case"""
@@ -222,7 +217,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
                                    merge_blocks=merge_blocks,
                                    switch_label_num=next_label_num,
                                    next_case_block=next_case_block_),
-                               possible_switch_break=build_switch_break(cases[ix_], is_fallthrough))
+                               possible_switch_break=self.switch_break_str(cases[ix_], is_fallthrough, switch_label))
 
         def add_default(code_str) -> str:
 

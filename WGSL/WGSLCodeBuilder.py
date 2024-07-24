@@ -12,6 +12,10 @@ class WGSLCodeBuilder(CodeBuilder):
     def __init__(self, cfg: CFG):
         super().__init__(cfg)
 
+    @staticmethod
+    def _switch_label(switch_label: str = None) -> str:
+        raise ValueError("Shouldn't be here!")
+
     def _prevent_discarding_bindings(self) -> str:
         """WGSL silently discards bindings not used by the shader, then throws an error because it's missing the binding
         it just threw away.
@@ -60,7 +64,7 @@ class WGSLCodeBuilder(CodeBuilder):
     def _break_code() -> str:
         return """
         cntrl_val = -1;
-		continue; // 'break' breaks from switch, not loop. This code is cleaner for the latter.
+		continue; // 'break' breaks from switch, not loop. This code works cleaner for the latter.
         """
 
     @staticmethod
@@ -171,26 +175,6 @@ class WGSLCodeBuilder(CodeBuilder):
             else {{
                 {false_block}
             }}"""
-
-    def _calc_else_block_code(self, block, merge_blocks, next_case_block, switch_label_num) -> str:
-
-        # when True, the false branch doesn't go straight to merge block
-        dst = self.cfg.out_edges_destinations(block)
-        false_branch_block = dst[0]
-        merge_block = self.cfg.merge_block(block)
-
-        is_if_else_statement = false_branch_block != merge_blocks[0].merge_block
-
-        if not is_if_else_statement:
-            return ""
-
-        return self._else_code_str().format(false_block=self.code_in_block_range(
-            block=false_branch_block,
-            end_block=merge_block,
-            merge_blocks=merge_blocks,
-            next_case_block=next_case_block,
-            switch_label_num=switch_label_num)
-        )
 
     def _selection_str(self, true_branch_block, merge_block, block, merge_blocks, next_case_block, switch_label_num):
         return """

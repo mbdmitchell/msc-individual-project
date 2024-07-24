@@ -93,7 +93,7 @@ class CodeBuilder(ABC):
         false_branch_block = dst[0]
         merge_block = self.cfg.merge_block(block)
 
-        is_if_else_statement = false_branch_block != merge_blocks[0].merge_block
+        is_if_else_statement = false_branch_block != merge_block
 
         if not is_if_else_statement:
             return ""
@@ -147,6 +147,20 @@ class CodeBuilder(ABC):
                      switch_label_num: int,
                      next_case_block: int = None) -> str:
         pass
+
+    @staticmethod
+    @abstractmethod
+    def _switch_label(switch_label: str = None) -> str:
+        pass
+
+    def switch_break_str(self, target: int, is_fallthrough: bool, switch_label: str = None):
+        c1 = is_fallthrough  # leaves scope of current case block and fall into scope of next => no switch_break
+        c2 = self.cfg.is_exit_block(target)  # "(return)" added later => no switch_break
+        c3 = self.cfg.is_continue_block(target) or self.cfg.is_break_block(target)  # relevant. added later => no SB
+        if c1 or c2 or c3:
+            return ""
+        else:
+            return self._switch_label(switch_label)
 
     # ------------------------------------------------------------------------------------------------------------------
 
