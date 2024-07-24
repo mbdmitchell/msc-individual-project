@@ -287,7 +287,7 @@ class CFGGenerator:
         return self._cfg
 
     def _add_simple_cfg(self, depth, allow_fallthrough: bool):
-        """Loops, selections, and switches. No continues, breaks, self-loops, or multiedges."""
+        """Loops, selections, and switches. No continues or breaks."""
         blocks = queue.Queue()
         blocks.put(BlockData(block=1, outer_merge=None, outer_header=None, current_depth=0))
 
