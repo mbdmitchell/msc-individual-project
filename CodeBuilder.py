@@ -162,6 +162,16 @@ class CodeBuilder(ABC):
         else:
             return self._switch_label(switch_label)
 
+    def calc_end_block_for_default(self, default, merge_blocks, block) -> int:
+        # if true, it's not a true merge (in the sense that blocks from other cases can't reach it)
+        if default == merge_blocks[-1].merge_block:
+            nearest_loop_header = next((b.related_header for b in merge_blocks[-2::-1]
+                                        if self.cfg.is_loop_header(b.related_header)), None)
+
+            return nearest_loop_header
+        else:
+            return self.cfg.merge_block(block)
+
     # ------------------------------------------------------------------------------------------------------------------
 
     def code_in_block_range(self,

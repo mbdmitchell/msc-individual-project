@@ -118,14 +118,7 @@ class WGSLCodeBuilder(CodeBuilder):
 
         def add_default() -> str:
 
-            # if true, it's not a true merge (in the sense that blocks from other cases can't reach it)
-            if default == merge_blocks[-1].merge_block:
-                nearest_loop_header = next((b.related_header for b in merge_blocks[-2::-1]
-                                            if self.cfg.is_loop_header(b.related_header)), None)
-
-                end_block_ = nearest_loop_header
-            else:
-                end_block_ = self.cfg.merge_block(block)
+            end_block_ = self.calc_end_block_for_default(default, merge_blocks, block)
 
             return """
             default: {{
@@ -144,8 +137,8 @@ class WGSLCodeBuilder(CodeBuilder):
                 {cases}
                 {default}
             }}""".format(cntrl=self._set_and_increment_control(),
-                        cases=add_cases(),
-                        default=add_default())
+                         cases=add_cases(),
+                         default=add_default())
 
     @staticmethod
     def _loop_code_str() -> str:

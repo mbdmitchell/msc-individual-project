@@ -198,9 +198,9 @@ class WebAssemblyCodeBuilder(CodeBuilder):
                                                                 current_case_block=cases[ix_],
                                                                 next_case_block=next_case_block_)
             if is_fallthrough:
-                end_block = next_case_block_
+                end_block_ = next_case_block_
             else:
-                end_block = self.cfg.merge_block(block)
+                end_block_ = self.cfg.merge_block(block)
 
             return """
                     (block
@@ -213,7 +213,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
                                code=code_str,
                                target_code=self.code_in_block_range(
                                    block=cases[ix_],
-                                   end_block=end_block,
+                                   end_block=end_block_,
                                    merge_blocks=merge_blocks,
                                    switch_label_num=next_label_num,
                                    next_case_block=next_case_block_),
@@ -221,15 +221,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
 
         def add_default(code_str) -> str:
 
-            # if true, it's not a true merge (in the sense that blocks from other cases can't reach it)
-            if default == merge_blocks[-1].merge_block:
-                nearest_loop_header = next((b.related_header for b in merge_blocks[-2::-1]
-                                            if self.cfg.is_loop_header(b.related_header)), None)
-
-                end_block_ = nearest_loop_header
-            else:
-                end_block_ = self.cfg.merge_block(block)
-
+            end_block_ = self.calc_end_block_for_default(default, merge_blocks, block)
 
             return """
                 {cntrl}
