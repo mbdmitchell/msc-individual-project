@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from CFG import *
 
-from CodeBuilder import CodeBuilder
-from MergeBlockData import MergeBlockData
+from common.CodeBuilder import CodeBuilder
+from common.MergeBlockData import MergeBlockData
 
 import logging
 
@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.CRITICAL,
 
 logger = logging.getLogger('simple_logger')
 
-class WebAssemblyCodeBuilder(CodeBuilder):
+class WASMCodeBuilder(CodeBuilder):
 
     def __init__(self, cfg: CFG):
         super().__init__(cfg)
@@ -191,8 +191,6 @@ class WebAssemblyCodeBuilder(CodeBuilder):
             """Return code_str + new case"""
             next_case_block_: int = default if ix_ + 1 == len(cases) else cases[ix_ + 1]
 
-            logger.info(f"Fallthrough test: Finding path from {cases[ix_]} to {next_case_block_}...")
-
             is_fallthrough = self._there_is_path_not_using_loop(block=block,
                                                                 merge_blocks=merge_blocks,
                                                                 current_case_block=cases[ix_],
@@ -230,7 +228,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
                     ;; Target for (br {ix}) => default
                     {target_code}
                 )
-        """.format(cntrl=WebAssemblyCodeBuilder._set_and_increment_control(),
+        """.format(cntrl=WASMCodeBuilder._set_and_increment_control(),
                    ix=len(cases),
                    code=code_str,
                    target_code=self.code_in_block_range(
@@ -267,7 +265,7 @@ class WebAssemblyCodeBuilder(CodeBuilder):
 
     @staticmethod
     def _format_code(code: str) -> str:
-        from utils import format_code
+        from common.utils import format_code
         return format_code(
             code=code,
             add_line_above=[";; setup", ";; control flow code"],
