@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import pickle
 import queue
 import random
+from datetime import timedelta, datetime
 
 from CFG import CFG
 import networkx as nx
@@ -95,13 +97,15 @@ class RelatedBlocksLoop:
         return self._merge_block
 
 
-def _generate_cfg(seed, depth,
+def _generate_cfg(seed,
+                  depth,
                   is_complex: bool,
                   allow_fallthrough: bool,
+                  min_successors, max_successors,
                   verbose=False,
                   break_continue_probability=0.0):
     random.seed(seed)
-    generator = CFGGenerator()._add_simple_cfg(depth, allow_fallthrough)
+    generator = CFGGenerator()._add_simple_cfg(depth, allow_fallthrough, min_successors, max_successors)
     if is_complex:
         generator = generator._add_breaks_and_continues(break_continue_probability)
     cfg = generator.get_cfg()
@@ -276,17 +280,17 @@ class CFGGenerator:
 
         return RelatedBlocksLoop(true_block, merge_block)
 
-    def _build_rand_construct(self, block_data: BlockData, allow_fallthrough: bool):
+    def _build_rand_construct(self, block_data: BlockData, allow_fallthrough: bool, min_successors, max_successors):
         choice = random.choice([self._make_selection, self._make_loop, self._make_switch, self._make_basic])
         if choice == self._make_switch:
-            return choice(block_data, random.randint(2, 4), allow_fallthrough)
+            return choice(block_data, random.randint(min_successors, max_successors), allow_fallthrough)
         else:
             return choice(block_data)
 
     def get_cfg(self):
         return self._cfg
 
-    def _add_simple_cfg(self, depth, allow_fallthrough: bool):
+    def _add_simple_cfg(self, depth, allow_fallthrough: bool, min_successors, max_successors):
         """Loops, selections, and switches. No continues or breaks."""
         blocks = queue.Queue()
         blocks.put(BlockData(block=1, outer_merge=None, outer_header=None, current_depth=0))
@@ -298,7 +302,7 @@ class CFGGenerator:
             if block_data.current_depth() < depth:
                 if block_data.block() in self.visited_blocks:
                     continue
-                next_blocks = self._build_rand_construct(block_data, allow_fallthrough)
+                next_blocks = self._build_rand_construct(block_data, allow_fallthrough, min_successors, max_successors)
                 self._visit(block_data.block())
                 for nb in next_blocks:
                     if nb in self.visited_blocks:
@@ -400,4 +404,41 @@ class CFGGenerator:
             break_continue_probability=break_continue_probability,
             verbose=verbose
         )
+
+    def generate_cfgs(self,
+                      target_filepath: str,
+                      no_of_graphs: int,
+                      min_depth: int,
+                      max_depth: int,
+                      min_successors: int,
+                      max_successors: int,
+                      allow_fallthrough: bool,
+                      is_complex: bool = True,
+                      break_continue_probability: float = 0.0,
+                      seed: int = None):
+
+        rand = random.Random()
+        rand.seed(seed)
+
+        generated_hashes = set()
+        TIME_LIMIT = timedelta(seconds=5)  # if it can't generate a new CFG in TIME_LIMIT, early return.
+
+        for i in range(no_of_graphs):
+
+            start_time = datetime.now()
+            while True:
+                if datetime.now() - start_time > TIME_LIMIT:
+                    print(f"Aborted graph generation for graph {i} (>{TIME_LIMIT} elapsed)")
+                    return  # or continue, if you want to skip this CFG and try the next one
+
+                depth = rand.randint(min_depth, max_depth)
+                cfg = _generate_cfg(seed, depth, is_complex, allow_fallthrough, min_successors, max_successors,
+                                         False, break_continue_probability)
+                cfg_hash = hash(cfg)
+                if cfg_hash not in generated_hashes:
+                    generated_hashes.add(cfg_hash)
+                    break
+
+            with open(f'{target_filepath}/graph_{i}.pickle', "wb") as f:
+                pickle.dump(cfg, f)
 

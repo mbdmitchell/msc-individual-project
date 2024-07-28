@@ -2,6 +2,7 @@ __version__ = "1.0.0"
 __author__ = "Max Mitchell"
 
 from .CFG import *
+from .CFGGenerator import CFGGenerator
 from .example_CFGs import (
     cfg_0,
     cfg_if_1,
