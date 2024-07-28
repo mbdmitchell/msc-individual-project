@@ -7,14 +7,6 @@ from CFG import *
 from common.CodeBuilder import CodeBuilder
 from common.MergeBlockData import MergeBlockData
 
-import logging
-
-# change level to get debug info
-logging.basicConfig(level=logging.CRITICAL,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-
-logger = logging.getLogger('simple_logger')
-
 class WASMCodeBuilder(CodeBuilder):
 
     def __init__(self, cfg: CFG):

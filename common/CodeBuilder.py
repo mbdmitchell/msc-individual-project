@@ -127,8 +127,11 @@ class CodeBuilder(ABC):
 
     # ===================================================================
 
-    # TODO: Have CFGGenerator add is_fallthrough attr to each relevant node DURING creation.
     def _there_is_path_not_using_loop(self, block, merge_blocks, current_case_block, next_case_block):
+        """
+        Checks if there is a path between `current_case_block` and `next_case_block` in the control flow graph
+        that does not pass through a loop header. Needed for checking switch fallthrough.
+        """
 
         is_loop_header_present = any(self.cfg.is_loop_header(bk.related_header) for bk in merge_blocks)
 
@@ -159,14 +162,6 @@ class CodeBuilder(ABC):
                 blocks_to_try.extend(to_add)
         return False
 
-
-        # else:
-        #     try:
-        #         paths = list(nx.all_simple_edge_paths(self.cfg.graph, current_case_block, next_case_block))
-        #         return any(all(block not in edge for edge in path) for path in paths)
-        #     except nx.NetworkXNoPath:
-        #         return False
-
     @abstractmethod
     def _switch_code(self,
                      block: int | None,
@@ -184,14 +179,16 @@ class CodeBuilder(ABC):
     def switch_break_str(self, target: int, is_fallthrough: bool, switch_label: str = None):
         c1 = is_fallthrough  # leaves scope of current case block and fall into scope of next => no switch_break
         c2 = self.cfg.is_exit_block(target)  # "(return)" added later => no switch_break
-        c3 = self.cfg.is_continue_block(target) or self.cfg.is_break_block(target)  # relevant. added later => no SB
+        c3 = self.cfg.is_continue_block(target) or self.cfg.is_break_block(target)  # relevant. added later => no S.B.
         if c1 or c2 or c3:
             return ""
         else:
             return self._switch_label(switch_label)
 
     def calc_end_block_for_default(self, default, merge_blocks, block) -> int:
-        # if true, it's not a true merge (in the sense that blocks from other cases can't reach it)
+        """Calculates the appropriate end block for the default case in a switch construct."""
+
+        # If true, it means it's not a *proper* merge (blocks from other cases can't reach it, e.g. tree-like CFGs)
         if default == merge_blocks[-1].merge_block:
             nearest_loop_header = next((b.related_header for b in merge_blocks[-2::-1]
                                         if self.cfg.is_loop_header(b.related_header)), None)
@@ -209,7 +206,7 @@ class CodeBuilder(ABC):
                             next_case_block: int = None,
                             switch_label_num: int = 0) -> str:
         """
-        Returns the code for all blocks between start_ and end_block (exclusive)
+        Returns the code for all blocks in range [block, end_block)
         In practice, if start_block is a header, end_block will be the corresponding merge block.
         """
 
@@ -264,7 +261,7 @@ class CodeBuilder(ABC):
                               next_case_block=next_case_block,
                               switch_label_num=switch_label_num)
 
-            if merge_block != next_case_block:  # if ==, then the code is added later
+            if merge_block != next_case_block:  # if true, then the code is added later
                 code += self.code_in_block_range(block=merge_block,
                                                  end_block=end_block,
                                                  merge_blocks=merge_blocks,
@@ -280,7 +277,7 @@ class CodeBuilder(ABC):
 
     def build_code(self) -> str:
 
-        self.added_blocks = set()  # if user wants to call build_code() >1 times
+        self.added_blocks = set()  # Reset the set of added blocks if build_code() is called multiple times
 
         raw_code = self.code_in_block_range(block=self.cfg.entry_node(),
                                             end_block=None,

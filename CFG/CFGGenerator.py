@@ -10,7 +10,15 @@ import networkx as nx
 
 
 class BlockData:
-    """Little helper so i dont accidentally muddle param order."""
+    """
+    A helper class to manage block data and ensure parameter order is maintained.
+
+    Attributes:
+        block (int): The block identifier.
+        outer_merge (int | None): The outer merge block identifier, if any.
+        outer_header (int | None): The outer header block identifier, if any.
+        current_depth (int): The current depth of the block in the control flow graph.
+    """
     def __init__(self, block: int, outer_merge: int | None, outer_header: int | None, current_depth: int):
         self._block = block
         self._outer_merge = outer_merge
@@ -61,10 +69,10 @@ class RelatedBlocksSwitch:
 
 
 class RelatedBlocksSelection:
-    def __init__(self, f, t, m):
-        self._false_block = f
-        self._true_block = t
-        self._merge_block = m
+    def __init__(self, false_block, true_block, merge_block):
+        self._false_block = false_block
+        self._true_block = true_block
+        self._merge_block = merge_block
 
     def __iter__(self):
         yield self._true_block
@@ -82,9 +90,9 @@ class RelatedBlocksSelection:
 
 
 class RelatedBlocksLoop:
-    def __init__(self, t, m):
-        self._true_block = t
-        self._merge_block = m
+    def __init__(self, true_block, merge_block):
+        self._true_block = true_block
+        self._merge_block = merge_block
 
     def __iter__(self):
         yield self._true_block
@@ -104,17 +112,23 @@ def _generate_cfg(seed,
                   min_successors, max_successors,
                   verbose=False,
                   break_continue_probability=0.0):
+
     random.seed(seed)
     generator = CFGGenerator()._add_simple_cfg(depth, allow_fallthrough, min_successors, max_successors)
+
     if is_complex:
         generator = generator._add_breaks_and_continues(break_continue_probability)
+
     cfg = generator.get_cfg()
 
-    if verbose:
-        for node in cfg.nodes(data=True):
-            print(node)
-        for node in cfg.nodes():
-            print(node, cfg.out_edges(node))
+    if not verbose:
+        return cfg
+
+    # verbose
+    for node in cfg.nodes(data=True):
+        print(node)
+    for node in cfg.nodes():
+        print(node, cfg.out_edges(node))
 
     return cfg
 
@@ -162,10 +176,12 @@ class CFGGenerator:
 
         return block_data.outer_merge() if merge_with_outer else self._get_id()
 
-    def _make_basic(self, block_data: BlockData) -> list[int]:  # all other _make functions return list
+    def _make_basic(self, block_data: BlockData) -> list[int]:
         """
-        O->... => O->O->...
-        :return new_block
+        Converts a basic block structure from O->... to O->O->...
+
+        This function creates a new block, moves the successors of the existing block to the new block,
+        and then connects the existing block to the new block.
         """
 
         new_block = self._get_id()
@@ -179,11 +195,17 @@ class CFGGenerator:
 
     def _make_selection(self, block_data: BlockData) -> RelatedBlocksSelection:
         """
-        O-> ... O
-               /\
-              O O
-              \/
-              O
+        Creates a selection (if-else) structure in the control flow graph.
+
+        The function constructs a control flow structure that branches into two paths (true and false),
+        both of which merge back into a single block.
+
+        The structure is visualized as:
+            O -> ... O
+                    /\
+                   O O
+                   \/
+                   O
         """
 
         false_block = self._get_id()
@@ -205,13 +227,22 @@ class CFGGenerator:
         return RelatedBlocksSelection(false_block, true_block, merge_block)
 
     def _make_switch(self, block_data: BlockData, no_of_branches, allow_fallthrough: bool) -> RelatedBlocksSwitch:
-        """ Add switch w/ possible fallthrough
-        O-> ... O
-               /\
-              O O
-              \/
-              O
-        allow_fallthrough: required as some languages, e.g., WGSL don't allow it
+        """
+        Adds a switch construct with possible fallthrough to the control flow graph.
+
+        The function constructs a switch control flow structure that branches into multiple cases
+        and a default branch. Each branch can optionally fall through to the next case or merge
+        back into a single block.
+
+        The structure is visualized as:
+            O -> ... O
+                    /\
+                   O O
+                   \/
+                   O
+
+        allow_fallthrough (bool): Determines whether fallthrough between cases is allowed.
+                                  Required as some languages (e.g., WGSL) don't allow fallthrough.
         """
 
         block = block_data.block()
@@ -252,6 +283,8 @@ class CFGGenerator:
 
     def _make_loop(self, block_data: BlockData) -> RelatedBlocksLoop:
         """
+        The function constructs a loop control flow structure with a single entry point, a body (true block),
+        and a merge block.
         O-> ...     +>O--+
                     | |  |
                     +-O  |
@@ -281,6 +314,12 @@ class CFGGenerator:
         return RelatedBlocksLoop(true_block, merge_block)
 
     def _build_rand_construct(self, block_data: BlockData, allow_fallthrough: bool, min_successors, max_successors):
+        """
+        Randomly selects and constructs a control flow graph construct.
+
+        The function randomly chooses one of the following constructs: selection, loop, switch, or basic.
+        If a switch construct is chosen, it will include a random number of branches within the specified range.
+        """
         choice = random.choice([self._make_selection, self._make_loop, self._make_switch, self._make_basic])
         if choice == self._make_switch:
             return choice(block_data, random.randint(min_successors, max_successors), allow_fallthrough)
@@ -314,8 +353,8 @@ class CFGGenerator:
         return self
 
     def _remove_all_self_loops(self):
-        """There is a bug that infrequently causes unintended self loops to be created. This fn removes them until the
-        bug can be addressed"""
+        """There is a rare bug that causes unintended self loops to be created. This fn removes them until
+        the root cause can be addressed"""
         for n in self._cfg.nodes():
             while (n, n) in self._cfg.graph.edges(n):
                 self._cfg.remove_edge(n, n)

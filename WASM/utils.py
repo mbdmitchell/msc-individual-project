@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import tempfile
@@ -35,12 +36,12 @@ def optimise_wasm(unoptimised_wasm: str, opt_option: str, output_filepath: str =
                    output_filepath]
 
         if verbose:
-            print(f"Running command: {' '.join(cmd)}")
+            logging.info(f"Running command: {' '.join(cmd)}")
 
         result = subprocess.run(cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
-            print(f"Error optimizing {unoptimised_wasm_filepath}: {result.stderr}")
+            logging.error(f"Error optimizing {unoptimised_wasm_filepath}: {result.stderr}")
         elif output_filepath is None:
             print(result.stdout)  # Print the output to stdout
         else:
@@ -48,7 +49,6 @@ def optimise_wasm(unoptimised_wasm: str, opt_option: str, output_filepath: str =
                 print(f"Optimized WASM saved to {output_filepath}")
 
     finally:
-        # Clean up the temporary file
         os.remove(unoptimised_wasm_filepath)
 
 

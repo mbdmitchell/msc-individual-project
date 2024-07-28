@@ -13,7 +13,6 @@ from common.utils import generate_program, save_program
 from CFG import CFGGenerator
 from common.Language import Language
 
-# TODO: select language, opt-level(s) (if applicable)
 def setup_logging(verbose: bool):
     """
     Sets up the logging configuration.
@@ -73,6 +72,8 @@ def main():
 
     if args.seed is not None:
         random.seed(args.seed)
+    if args.opt_level and args.language != Language.WASM:
+        parser.error("The --opt_level argument can only be used when the language is 'wasm'")
 
     setup_logging(args.verbose)
 

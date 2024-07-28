@@ -21,6 +21,8 @@ class CFGFormat(Enum):
     PNG = 3
     ALLOY = 4
 
+# TODO: Remove old multi-edge functionality
+# TODO: refactor to use DiGraph, a better fit
 
 class CFG:
     """
@@ -28,8 +30,6 @@ class CFG:
     to provide a cleaner interface for CFGs and decouple rest of the project components
     from a specific graph implementation.
     """
-
-    # TODO: refactor to use DiGraph, a better fit
 
     def __init__(self, filepath: Optional[str] = None,
                  graph: Optional[nx.MultiDiGraph] = None,
@@ -176,12 +176,6 @@ class CFG:
         if block is None:
             return False
         return len(self.graph.out_edges(block)) == 0
-
-    def parents(self, node: int):
-        return list(self.graph.predecessors(node))
-
-    def children(self, node: int):
-        return list(self.graph.successors(node))
 
     def entry_node(self) -> int:
         nodes = self.nodes(data=True)

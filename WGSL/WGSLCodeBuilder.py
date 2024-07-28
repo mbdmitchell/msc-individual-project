@@ -142,8 +142,13 @@ class WGSLCodeBuilder(CodeBuilder):
 
     @staticmethod
     def _loop_code_str() -> str:
-        """Odd structure required to represent while(loop_header){loop_body...} as loop
-        header block aren't represented as conditional expressions."""
+        """
+    Creates a string representation of a while loop in WGSL.
+
+    Due to WGSL's syntax and the representation of CFG blocks in the generated code,
+    a `loop` construct with manual control flow checks is used to handle the loop
+    header and body.
+    """
 
         return """
         {cntrl}

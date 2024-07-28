@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import CFG
 
@@ -73,7 +75,10 @@ class GLSLProgram(Program):
         self._code = self.builder.build_code()
         self.language = Language.GLSL
 
-    def generate_shader_test(self, input_directions, expected_path) -> str:
+    def generate_shader_test(self, input_directions, expected_path: list[int] | None = None) -> str:
+        # Optional expected_path to allow for generating (intentionally) incorrect shadertrap tests.
+        if not expected_path:
+            expected_path = self.cfg.expected_output_path(input_directions)
         return _generate_shader_test_aux(
             shader_code=self.get_code(),
             input_directions=input_directions,
@@ -91,9 +96,7 @@ class GLSLProgram(Program):
             os.makedirs(directory)
 
         if output_type == GLSLProgram.OutputType.COMP_SHADER:
-            # NB: There's no official extension in the spec. However, glslang, Khronos' reference GLSL
-            # compiler/validator, uses .comp for compute shaders.
-            file_extension = 'glsl'
+            file_extension = 'glsl'  # NB: There's no official extension in the GLSL spec.
             file_content = self.get_code()
         elif output_type == GLSLProgram.OutputType.SHADER_TEST:
             file_extension = 'shadertrap'
