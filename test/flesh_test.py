@@ -1,16 +1,22 @@
 import os
 import random
 import re
+import sys
 from itertools import product
 
 import pytest
 import tempfile
-import WAT
+import WASM
 import WGSL
 from CFG.CFGGenerator import CFGGenerator
 from GLSL import test_glsl
-from cfg_utilities import all_cfg_and_language_combos
-from utils import generate_program, Language, save_program
+
+from common.utils import generate_program, Language, save_program
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from test.cfg_utilities import all_cfg_and_language_combos
+
 
 
 def tst_generated_code(language: Language,
@@ -30,13 +36,13 @@ def tst_generated_code(language: Language,
 
         # VALIDATE
         if language == Language.WASM:
-            is_command_successful, msg = WAT.validate_wasm(code_filepath)
+            is_command_successful, msg = WASM.validate_wasm(code_filepath)
             if not is_command_successful:
                 return is_command_successful, msg
 
         # RUN
         if language == Language.WASM:
-            is_valid, msg = WAT.run_wasm(code_filepath, directions_path, output_path)
+            is_valid, msg = WASM.run_wasm(os.path.abspath(code_filepath), os.path.abspath(directions_path), os.path.abspath(output_path))
             if not is_valid:
                 return False, msg
             output_txt = ''
@@ -52,7 +58,6 @@ def tst_generated_code(language: Language,
             return is_wasm_match, msg
 
         elif language == Language.WGSL:
-            # read result from run_wgsl
             is_match, msg = WGSL.run_wgsl(code_filepath, input_directions, expected_output, output_path)
             return is_match, msg
 
@@ -68,7 +73,7 @@ def tst_generated_code(language: Language,
                 os.remove(output_path)
 
 
-def _test_direction(program, direction):
+def test_direction(program, direction):
     expected_output = program.cfg.expected_output_path(direction)
     match, msg = tst_generated_code(program.get_language(),
                                     program.get_file_path(),
@@ -84,7 +89,7 @@ def test_cfg(cfg, language):
     # GENERATE INPUT DIRECTIONS
 
     # TODO: write cfg.generate_n_valid_input_directions(n) taking even spread of paths w/ all guaranteed distinct
-    input_directions = [cfg.generate_valid_input_directions() for _ in range(10)]
+    input_directions = [cfg.generate_valid_input_directions(max_length=512) for _ in range(100)]
     # remove duplicates. TODO: Remove once generate_n_valid_input_directions is written
     seen = set()
     unique_inputs = []
@@ -106,7 +111,7 @@ def test_cfg(cfg, language):
         save_program(program, os.path.join(temp_dir, program_name))
 
         for direction in input_directions:
-            _test_direction(program, direction)
+            test_direction(program, direction)
 
 @pytest.fixture(scope="session")
 def tested_configs():
