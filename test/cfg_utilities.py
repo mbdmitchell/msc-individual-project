@@ -1,5 +1,5 @@
 from CFG.example_CFGs import *
-from utils import Language
+from common.utils import Language
 from itertools import product
 
 
