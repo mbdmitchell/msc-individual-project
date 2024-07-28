@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from CFG import *
 
-from CodeBuilder import CodeBuilder
-from MergeBlockData import MergeBlockData
+from common.CodeBuilder import CodeBuilder
+from common.MergeBlockData import MergeBlockData
 
 
 class GLSLCodeBuilder(CodeBuilder):
@@ -177,7 +177,7 @@ class GLSLCodeBuilder(CodeBuilder):
 
     @staticmethod
     def _format_code(code: str) -> str:
-        from utils import format_code
+        from common.utils import format_code
         return format_code(code=code,
                            add_line_above=['layout', 'void main()'],
                            deliminators=('{', '}'),

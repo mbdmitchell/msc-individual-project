@@ -3,8 +3,8 @@ import CFG
 
 from enum import Enum
 
-from Language import Language
-from Program import Program
+from common.Language import Language
+from common.Program import Program
 from GLSL import GLSLCodeBuilder
 
 def _list_to_space_separated_values(values: list[int]) -> str:
@@ -93,7 +93,7 @@ class GLSLProgram(Program):
         if output_type == GLSLProgram.OutputType.COMP_SHADER:
             # NB: There's no official extension in the spec. However, glslang, Khronos' reference GLSL
             # compiler/validator, uses .comp for compute shaders.
-            file_extension = 'comp'
+            file_extension = 'glsl'
             file_content = self.get_code()
         elif output_type == GLSLProgram.OutputType.SHADER_TEST:
             file_extension = 'shadertrap'

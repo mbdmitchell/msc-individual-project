@@ -1,7 +1,7 @@
 import os
 
-from Language import Language
-from Program import Program
+from common.Language import Language
+from common.Program import Program
 import CFG
 from WGSL import WGSLCodeBuilder
 

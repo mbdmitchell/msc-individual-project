@@ -1,4 +1,5 @@
 import concurrent.futures
+import logging
 import subprocess
 import time
 
@@ -43,12 +44,12 @@ def run_subprocess(command, output_path=None, redirect_output=False, verbose=Fal
                 with open(output_path, 'w') as output_file:
                     output_file.write(result.stdout)
 
-        if verbose:
-            print(f"{command} succeeded.", result.stdout if not redirect_output else "")
+        #logging.debug(f"{command} succeeded.", result.stdout if not redirect_output else "")
+
         return True, result.stdout if not redirect_output else None
     except subprocess.CalledProcessError as e:
         if verbose:
-            print(f"{command} failed:", e.stderr)
-            print("Command that failed:", e.cmd)
-            print("Return code:", e.returncode)
+            #logging.debug(f"{command} failed:", e.stderr)
+            logging.debug("Command that failed:", e.cmd)
+            logging.debug("Return code:", e.returncode)
         return False, e.stderr
