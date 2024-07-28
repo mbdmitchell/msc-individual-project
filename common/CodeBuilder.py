@@ -1,5 +1,5 @@
 from __future__ import annotations
-from MergeBlockData import MergeBlockData
+from common.MergeBlockData import MergeBlockData
 from CFG import *
 from abc import ABC, abstractmethod
 
@@ -127,17 +127,45 @@ class CodeBuilder(ABC):
 
     # ===================================================================
 
+    # TODO: Have CFGGenerator add is_fallthrough attr to each relevant node DURING creation.
     def _there_is_path_not_using_loop(self, block, merge_blocks, current_case_block, next_case_block):
+
         is_loop_header_present = any(self.cfg.is_loop_header(bk.related_header) for bk in merge_blocks)
 
-        if is_loop_header_present:
-            try:
-                paths = list(nx.all_simple_edge_paths(self.cfg.graph, current_case_block, next_case_block))
-                return any(all(block not in edge for edge in path) for path in paths)
-            except nx.NetworkXNoPath:
-                return False
-        else:
+        if not is_loop_header_present or len(merge_blocks) <= 1:
             return nx.has_path(self.cfg.graph, current_case_block, next_case_block)
+
+        closest_loop_header_enclosing_switch = None
+
+        for bk in merge_blocks[-2::-1]:  # Iterate from merge_blocks[-2] to merge_blocks[0] ([-1].header always switch)
+            if self.cfg.is_loop_header(bk.related_header):
+                closest_loop_header_enclosing_switch = bk.related_header
+                break
+
+        blocks_to_try = [current_case_block]
+        visited = set()
+
+        while len(blocks_to_try) != 0:
+            current = blocks_to_try.pop()
+            visited.add(current)
+            if (current, next_case_block) in self.cfg.out_edges(current):
+                return True
+            else:
+                to_add = [
+                    neighbor for neighbor in self.cfg.out_edges_destinations(current)
+                    if (neighbor not in visited) and (neighbor != closest_loop_header_enclosing_switch)
+                ]
+
+                blocks_to_try.extend(to_add)
+        return False
+
+
+        # else:
+        #     try:
+        #         paths = list(nx.all_simple_edge_paths(self.cfg.graph, current_case_block, next_case_block))
+        #         return any(all(block not in edge for edge in path) for path in paths)
+        #     except nx.NetworkXNoPath:
+        #         return False
 
     @abstractmethod
     def _switch_code(self,

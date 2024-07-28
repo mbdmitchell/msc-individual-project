@@ -1,9 +1,4 @@
-from enum import Enum
-
-from Language import Language
-from WAT import WebAssemblyProgram
-from GLSL import GLSLProgram
-from WGSL import WGSLProgram
+from common.Language import Language
 
 def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_marker=';;', ) -> str:
 
@@ -54,8 +49,11 @@ def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_mark
     return '\n'.join(formatted_lines)
 
 def generate_program(language, cfg):
+    from WASM.WASMProgram import WASMProgram
+    from GLSL.GLSLProgram import GLSLProgram
+    from WGSL.WGSLProgram import WGSLProgram
     if language == Language.WASM:
-        return WebAssemblyProgram(cfg)
+        return WASMProgram(cfg)
     elif language == Language.WGSL:
         return WGSLProgram(cfg)
     elif language == Language.GLSL:
@@ -65,6 +63,7 @@ def generate_program(language, cfg):
 
 def save_program(program, file_path):
     """Save program of any supported language"""
+    from GLSL.GLSLProgram import GLSLProgram
     language = program.get_language()
     if language == Language.WASM:
         program.save(file_path, save_as_executable=True)
