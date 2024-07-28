@@ -32,18 +32,6 @@ BIND_SHADER_STORAGE_BUFFER BUFFER directions BINDING 0
 BIND_SHADER_STORAGE_BUFFER BUFFER actual_path BINDING 1
 
 DECLARE_SHADER test_shader KIND COMPUTE
-#version 450
-
-layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
-
-layout(std430, binding = 0) buffer inputData {{
-  uint directions[];
-}};
-
-layout(std430, binding = 1) buffer outputData {{
-  uint actual_path[];
-}};
-
 {shader_code}
 
 END
