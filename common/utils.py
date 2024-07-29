@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from common.Language import Language
 
 def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_marker=';;', ) -> str:
@@ -63,7 +65,7 @@ def generate_program(language, cfg):
     else:
         raise ValueError("Unsupported language")
 
-def save_program(program, file_path, opt_level: str | None = None):
+def save_program(program, file_path, opt_level: Optional[str] = None):
 
     if opt_level:
         assert program.get_language() == Language.WASM
@@ -72,7 +74,7 @@ def save_program(program, file_path, opt_level: str | None = None):
     from GLSL.GLSLProgram import GLSLProgram
     language = program.get_language()
     if language == Language.WASM:
-        program.save(file_path, opt_level, save_as_executable=True)
+        program.save(file_path, opt_level=opt_level)
     elif language == Language.WGSL:
         program.save(file_path)
     elif language == Language.GLSL:
