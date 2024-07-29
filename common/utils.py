@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from common.Language import Language
 
 def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_marker=';;', ) -> str:
@@ -61,12 +63,16 @@ def generate_program(language, cfg):
     else:
         raise ValueError("Unsupported language")
 
-def save_program(program, file_path):
+def save_program(program, file_path, opt_level: str | None = None):
+
+    if opt_level:
+        assert program.get_language() == Language.WASM
+
     """Save program of any supported language"""
     from GLSL.GLSLProgram import GLSLProgram
     language = program.get_language()
     if language == Language.WASM:
-        program.save(file_path, save_as_executable=True)
+        program.save(file_path, opt_level, save_as_executable=True)
     elif language == Language.WGSL:
         program.save(file_path)
     elif language == Language.GLSL:
