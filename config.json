@@ -1,3 +1,4 @@
 {
-    "DAWN_NODE_PATH": "/Users/maxmitchell/dawn/out/Debug/dawn.node"
+    "DAWN_NODE_PATH": "/Users/maxmitchell/dawn/out/Debug/dawn.node",
+    "SHADERTEST_PATH": "/homes/mbm22/Documents/modules/msc-project/shadertrap/build/src/shadertrap/shadertrap"
 }

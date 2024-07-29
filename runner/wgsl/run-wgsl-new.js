@@ -1,7 +1,8 @@
 const fs = require('fs');
 const config = require('../../config.json');
 
-const { DAWN_NODE_PATH } = config;
+// const { DAWN_NODE_PATH } = config;
+const DAWN_NODE_PATH = config['DAWN_NODE_PATH'];
 
 const { create, globals } = require(DAWN_NODE_PATH);
 
