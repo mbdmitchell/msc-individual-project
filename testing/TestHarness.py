@@ -38,7 +38,10 @@ def generate_paths(cfg, graph_no, no_of_paths):
 
     paths_set = set()
 
-    while len(paths_set) < no_of_paths and datetime.now() - time_when_last_path_found < TIME_LIMIT:
+    def within_time_limit():
+        return datetime.now() - time_when_last_path_found < TIME_LIMIT
+
+    while len(paths_set) < no_of_paths and within_time_limit():
         path = cfg.generate_valid_input_directions(max_length=512)
         if tuple(path) not in paths_set:  # (tuple to make hashable)
             time_when_last_path_found = datetime.now()
@@ -66,7 +69,7 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Print results for every test")
     parser.add_argument("--seed", type=int, help="Seed for randomness", default=None)
     # parser.add_argument("--cfg_generation_approach", type=str)
-    # parser.add_argument("--static_code_level", type=int)  # 0 = big directions array, 1 = inbuilt stuff
+    # parser.add_argument("--static_code_level", type=int)  # 0 = global memory, 1 = static
 
     args = parser.parse_args()
 
