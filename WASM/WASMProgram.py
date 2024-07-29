@@ -22,7 +22,10 @@ class WASMProgram(Program):
     def compile(source_code_path, target_binary_path):
         subprocess.run(["wat2wasm", "--enable-multi-memory", source_code_path, "-o", target_binary_path])
 
-    def save(self, file_path: str, save_as_executable: bool, opt_level: Optional[str] = None, verbose=False):
+    def get_code(self) -> str:
+        return self._wat_code
+
+    def save(self, file_path: str, save_as_executable: bool = True, opt_level: Optional[str] = None, verbose=False):
 
         directory = os.path.dirname(os.path.abspath(file_path))
         if not os.path.exists(directory):
