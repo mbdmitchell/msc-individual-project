@@ -1,5 +1,7 @@
 import os
 
+import pkg_resources
+
 from GLSL import GLSLProgram
 
 import json
@@ -18,8 +20,7 @@ def run_glsl(program: GLSLProgram, input_directions: list[int]) -> bool:
 
     # Get the absolute path of the config.json file to ensure the correct path is used
     # regardless of the current working directory when the script is run.
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, '..', 'config.json')  #
+    config_path = pkg_resources.resource_filename(__name__, '../config.json')
 
     with open(config_path, 'r') as config_file:
         config = json.load(config_file)
