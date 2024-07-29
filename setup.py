@@ -15,6 +15,9 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/mbdmitchell/msc-individual-project',
     packages=find_packages(),
+    package_data={
+        '': ['config.json'],
+    },
     python_requires='>=3.9',
     install_requires=parse_requirements('requirements.txt'),
     test_suite='test',
