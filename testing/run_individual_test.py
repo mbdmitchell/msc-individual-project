@@ -1,7 +1,7 @@
 import pickle
 import sys
 
-from test.flesh_test import tst_generated_code
+from my_test.flesh_test import tst_generated_code
 
 def parse_directions(directions_str):
     return [int(x) for x in directions_str.split(',')]

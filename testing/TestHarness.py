@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from common import Language, generate_program, save_program
 from CFG import CFGGenerator
-from test import tst_generated_code
+from my_test import tst_generated_code
 
 
 def setup_logging(verbose: bool):
