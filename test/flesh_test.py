@@ -6,10 +6,12 @@ from itertools import product
 
 import pytest
 import tempfile
+
+import GLSL
 import WASM
 import WGSL
 from CFG.CFGGenerator import CFGGenerator
-from GLSL import test_glsl
+from GLSL import run_glsl
 
 from common.utils import generate_program, Language, save_program
 
@@ -18,18 +20,21 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from test.cfg_utilities import all_cfg_and_language_combos
 
 
+# TODO: code_filepath -> program_filepath
 
-def tst_generated_code(language: Language,
-                       code_filepath: str,
+def tst_generated_code(program,
                        input_directions: list[int],
                        expected_output: list[int],
                        clear_files_after=True):
 
-    directions_path = f'{code_filepath.rsplit("/", 1)[0]}/directions.txt'
-    output_path = f'{code_filepath.rsplit("/", 1)[0]}/output.txt'
+    language = program.get_language(),
+    code_filepath = program.get_file_path(),
+
+    directions_filepath = f'{code_filepath.rsplit("/", 1)[0]}/directions.txt'
+    output_filepath = f'{code_filepath.rsplit("/", 1)[0]}/output.txt'
 
     if language == Language.WASM:  # temporarily just focusing on removing IO for WGSL tests as not a noticeable bottleneck for WASM
-        with open(directions_path, 'w') as file:
+        with open(directions_filepath, 'w') as file:
             file.write(str(input_directions))
 
     try:
@@ -42,11 +47,11 @@ def tst_generated_code(language: Language,
 
         # RUN
         if language == Language.WASM:
-            is_valid, msg = WASM.run_wasm(os.path.abspath(code_filepath), os.path.abspath(directions_path), os.path.abspath(output_path))
+            is_valid, msg = WASM.run_wasm(os.path.abspath(code_filepath), os.path.abspath(directions_filepath), os.path.abspath(output_filepath))
             if not is_valid:
                 return False, msg
             output_txt = ''
-            with open(output_path) as f:
+            with open(output_filepath) as f:
                 for line in f:
                     output_txt += line
             cleaned_txt = re.sub(r'[^\d,]', '', output_txt)
@@ -58,25 +63,24 @@ def tst_generated_code(language: Language,
             return is_wasm_match, msg
 
         elif language == Language.WGSL:
-            is_match, msg = WGSL.run_wgsl(code_filepath, input_directions, expected_output, output_path)
+            is_match, msg = WGSL.run_wgsl(code_filepath, input_directions, expected_output, output_filepath)
             return is_match, msg
 
         elif language == Language.GLSL:
-            is_match, msg = test_glsl(code_filepath, directions_path, output_path)
+            is_match, msg = GLSL.run_glsl(program, input_directions)
             return is_match, msg
 
     finally:
         if clear_files_after:
-            if os.path.exists(directions_path):
-                os.remove(directions_path)
-            if os.path.exists(output_path):
-                os.remove(output_path)
+            if os.path.exists(directions_filepath):
+                os.remove(directions_filepath)
+            if os.path.exists(output_filepath):
+                os.remove(output_filepath)
 
 
 def test_direction(program, direction):
     expected_output = program.cfg.expected_output_path(direction)
-    match, msg = tst_generated_code(program.get_language(),
-                                    program.get_file_path(),
+    match, msg = tst_generated_code(program,
                                     direction,
                                     expected_output,
                                     clear_files_after=True)
