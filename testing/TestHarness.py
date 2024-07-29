@@ -122,16 +122,12 @@ def main():
     for i in range(args.no_of_graphs):
 
         cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
+
         program = generate_program(args.language, cfg)
+        save_program(program, f'{code_filepath}/code_{i}', opt_level=args.opt_level)
+
         pickle.dump(program, open(f'{program_filepath}/program_class_{i}.pickle', "wb"))
 
-        if args.opt_level:
-            assert args.language == Language.WASM
-            opt_wasm: bytes = program.optimise(args.opt_level)
-            with open(f'{code_filepath}/code_{i}.wasm', 'wb') as f:
-                f.write(opt_wasm)
-        else:
-            save_program(program, f'{code_filepath}/code_{i}')
 
     logging.info("Running tests... ")
 
@@ -147,8 +143,7 @@ def main():
         for p in range(len(paths)):
             direction = paths[p]
             expected_output = program.cfg.expected_output_path(direction)
-            match, msg = tst_generated_code(args.language,
-                                            f'{code_filepath}/code_{g}.{program.language.extension()}',
+            match, msg = tst_generated_code(program,
                                             direction,
                                             expected_output,
                                             clear_files_after=True)

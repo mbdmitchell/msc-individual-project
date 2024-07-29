@@ -11,7 +11,6 @@ import GLSL
 import WASM
 import WGSL
 from CFG.CFGGenerator import CFGGenerator
-from GLSL import run_glsl
 
 from common.utils import generate_program, Language, save_program
 
@@ -20,20 +19,20 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from test.cfg_utilities import all_cfg_and_language_combos
 
 
-# TODO: code_filepath -> program_filepath
+# TODO: Refactor so run_wasm and run_wgsl use program as param
 
 def tst_generated_code(program,
                        input_directions: list[int],
                        expected_output: list[int],
                        clear_files_after=True):
 
-    language = program.get_language(),
-    code_filepath = program.get_file_path(),
+    language = program.get_language()
+    code_filepath = program.get_file_path()
 
     directions_filepath = f'{code_filepath.rsplit("/", 1)[0]}/directions.txt'
     output_filepath = f'{code_filepath.rsplit("/", 1)[0]}/output.txt'
 
-    if language == Language.WASM:  # temporarily just focusing on removing IO for WGSL tests as not a noticeable bottleneck for WASM
+    if language == Language.WASM:  # temporarily not focusing on reducing IO / file handling for WASM as not noticeable bottleneck, unlike for WGSL
         with open(directions_filepath, 'w') as file:
             file.write(str(input_directions))
 
