@@ -2,11 +2,8 @@ import argparse
 import logging
 import os
 import pickle
-import sys
 from datetime import timedelta, datetime
 import random
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from test.flesh_test import tst_generated_code
 from common.utils import generate_program, save_program

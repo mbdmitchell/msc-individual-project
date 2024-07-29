@@ -1,7 +1,5 @@
 import os
 import random
-import re
-import sys
 from itertools import product
 
 import pytest
@@ -13,9 +11,6 @@ import WGSL
 from CFG.CFGGenerator import CFGGenerator
 
 from common.utils import generate_program, Language, save_program
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from test.cfg_utilities import all_cfg_and_language_combos
 
 def tst_generated_code(program,
