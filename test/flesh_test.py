@@ -9,7 +9,7 @@ import WASM
 import WGSL
 
 from CFG import CFGGenerator
-from cfg_utilities import all_cfg_and_language_combos
+from .cfg_utilities import all_cfg_and_language_combos
 from common import Language, generate_program, save_program
 
 def tst_generated_code(program,

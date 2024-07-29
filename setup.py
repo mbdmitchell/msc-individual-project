@@ -1,4 +1,5 @@
-from setuptools import setup
+from setuptools import setup, find_packages
+
 
 def parse_requirements(filename):
     with open(filename, 'r') as file:
@@ -13,7 +14,7 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/mbdmitchell/msc-individual-project',
-    py_modules=['CFG', 'common', 'GLSL', 'runner', 'test', 'testing', 'WASM', 'WGSL'],
+    packages=find_packages(),
     python_requires='>=3.9',
     install_requires=parse_requirements('requirements.txt'),
     test_suite='test',

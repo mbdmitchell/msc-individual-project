@@ -1,6 +1,7 @@
 from CFG.example_CFGs import *
-from common.utils import Language
 from itertools import product
+
+from common import Language
 
 
 def example_cfgs_with_fallthrough():
