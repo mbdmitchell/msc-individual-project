@@ -5,10 +5,10 @@ import pickle
 from datetime import timedelta, datetime
 import random
 
-from test.flesh_test import tst_generated_code
-from common.utils import generate_program, save_program
+from common import Language, generate_program, save_program
+from flesh_test import tst_generated_code
 from CFG import CFGGenerator
-from common.Language import Language
+
 
 def setup_logging(verbose: bool):
     """Sets up the logging configuration."""

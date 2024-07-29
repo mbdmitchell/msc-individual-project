@@ -1,17 +1,16 @@
 import os
 import random
 from itertools import product
-
 import pytest
 import tempfile
 
 import GLSL
 import WASM
 import WGSL
-from CFG.CFGGenerator import CFGGenerator
 
-from common.utils import generate_program, Language, save_program
-from test.cfg_utilities import all_cfg_and_language_combos
+from CFG import CFGGenerator
+from cfg_utilities import all_cfg_and_language_combos
+from common import Language, generate_program, save_program
 
 def tst_generated_code(program,
                        input_directions: list[int],

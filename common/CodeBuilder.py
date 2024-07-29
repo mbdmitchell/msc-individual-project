@@ -1,7 +1,8 @@
 from __future__ import annotations
-from common.MergeBlockData import MergeBlockData
 from CFG import *
 from abc import ABC, abstractmethod
+
+from common import MergeBlockData
 
 
 class CodeBuilder(ABC):

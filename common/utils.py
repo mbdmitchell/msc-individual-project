@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 from typing import Optional
-
-from common.Language import Language
+from common import Language
 
 def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_marker=';;', ) -> str:
 
@@ -24,13 +22,11 @@ def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_mark
     for line in lines:
         stripped_line = line.lstrip()
 
-        # Skip blank lines
         if not stripped_line:
             continue
 
         just_closed_bracket: bool = stripped_line[0] == closed_delim
 
-        # Temp adjust indentation
         if just_closed_bracket:
             current_indent -= 1
 
@@ -43,14 +39,13 @@ def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_mark
 
         formatted_lines.append(indented_line)
 
-        # Update the current indentation level
         current_indent += bracket_count_difference(stripped_line)
 
-        # Readjust indentation
         if just_closed_bracket:
             current_indent += 1
 
     return '\n'.join(formatted_lines)
+
 
 def generate_program(language, cfg):
     from WASM.WASMProgram import WASMProgram
@@ -65,19 +60,20 @@ def generate_program(language, cfg):
     else:
         raise ValueError("Unsupported language")
 
+
 def save_program(program, file_path, opt_level: Optional[str] = None):
+    """Save program of any supported language"""
 
     if opt_level:
         assert program.get_language() == Language.WASM
 
-    """Save program of any supported language"""
-    from GLSL.GLSLProgram import GLSLProgram
     language = program.get_language()
     if language == Language.WASM:
         program.save(file_path, opt_level=opt_level)
     elif language == Language.WGSL:
         program.save(file_path)
     elif language == Language.GLSL:
+        from GLSL.GLSLProgram import GLSLProgram
         program.save(file_path, GLSLProgram.OutputType.COMP_SHADER)
     else:
         raise ValueError("Unsupported language")

@@ -1,7 +1,7 @@
 # [CFG -> Program]. Can then compile, save, and return the code of Program
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from CFG import *
 from common import Language
 
