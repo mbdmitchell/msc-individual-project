@@ -1,3 +1,5 @@
+import os
+
 from GLSL import GLSLProgram
 
 import json
@@ -14,7 +16,12 @@ def run_glsl(program: GLSLProgram, input_directions: list[int]) -> bool:
         temp_file.write(shadertrap_test.encode('utf-8'))
         shadertrap_test_filepath = temp_file.name
 
-    with open('../config.json', 'r') as config_file:
+    # Get the absolute path of the config.json file to ensure the correct path is used
+    # regardless of the current working directory when the script is run.
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, '..', 'config.json')  #
+
+    with open(config_path, 'r') as config_file:
         config = json.load(config_file)
         shadertrap_exe_filepath = config['SHADERTRAP_PATH']
 
