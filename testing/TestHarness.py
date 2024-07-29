@@ -11,9 +11,7 @@ from CFG import CFGGenerator
 from common.Language import Language
 
 def setup_logging(verbose: bool):
-    """
-    Sets up the logging configuration.
-    """
+    """Sets up the logging configuration."""
     log_format = "%(asctime)s - %(levelname)s - %(message)s"
     root_logger = logging.getLogger()
     if root_logger.hasHandlers():
@@ -58,17 +56,23 @@ def main():
     parser.add_argument("language", type=language_type, help="The language to use (e.g., wasm, wgsl, glsl)")
     parser.add_argument("no_of_graphs", type=int)
     parser.add_argument("no_of_paths", type=int)
-    # parser.add_argument("min_depth", type=int)
-    # parser.add_argument("max_depth", type=int)
-    parser.add_argument("folder", type=str)
-    parser.add_argument("--opt_level", type=str, choices=["O", "O1", "O2", "O3", "O4", "Os", "Oz"], default=None, help="Optimization level for WASM")
 
-    parser.add_argument("--verbose", action="store_true", help="Print results for every test")
+    parser.add_argument("--opt_level", type=str, choices=["O", "O1", "O2", "O3", "O4", "Os", "Oz"], default=None,
+                        help="Optimization level for WASM")
     parser.add_argument("--seed", type=int, help="Seed for randomness", default=None)
+
+    parser.add_argument("--min_depth", type=int, default=3)
+    parser.add_argument("--max_depth", type=int, default=5)
+    parser.add_argument("--output_folder", type=str)
+    parser.add_argument("--verbose", action="store_true", help="Print results for every test")
     # parser.add_argument("--cfg_generation_approach", type=str)
     # parser.add_argument("--static_code_level", type=int)  # 0 = global memory, 1 = static
 
     args = parser.parse_args()
+    if args.folder is None:
+        args.folder = f'./{datetime.now().strftime("%Y/%m/%d, %H:%M")}, {args.language.name} TEST'
+    if args.min_depth > args.max_depth:
+        parser.error("min depth > max depth")
 
     if args.seed is not None:
         random.seed(args.seed)
