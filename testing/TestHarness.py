@@ -142,10 +142,8 @@ def main():
 
         for p in range(len(paths)):
             direction = paths[p]
-            expected_output = program.cfg.expected_output_path(direction)
             match, msg = tst_generated_code(program,
                                             direction,
-                                            expected_output,
                                             clear_files_after=True)
 
             logging.debug(f'cfg_{g}_path_{p}: {match}, {msg}')

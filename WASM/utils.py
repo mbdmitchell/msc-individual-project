@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import subprocess
 import tempfile
 
@@ -52,8 +53,32 @@ def optimise_wasm(unoptimised_wasm: str, opt_option: str, output_filepath: str =
         os.remove(unoptimised_wasm_filepath)
 
 
-def run_wasm(code_filepath, directions_path, output_path):
-    command_successful, msg = run_subprocess(
-        ['node', './runner/run_wasm.js', code_filepath, directions_path, output_path]
+def run_wasm(program, input_directions, output_filepath):
+
+    code_filepath = program.get_file_path()
+    expected_output = program.cfg.expected_output_path(input_directions)
+
+    with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt') as temp_file:
+        temp_file.write(str(input_directions))
+        temp_filepath = temp_file.name
+
+    is_valid, msg = run_subprocess(
+        ['node', './runner/run_wasm.js', code_filepath, temp_filepath, output_filepath]
     )
-    return command_successful, msg
+
+    if not is_valid:
+        return False, msg
+
+    output_txt = ''
+    with open(output_filepath) as f:
+        for line in f:
+            output_txt += line
+    cleaned_txt = re.sub(r'[^\d,]', '', output_txt)
+    actual_output = [int(x) for x in cleaned_txt.split(',') if x.strip().isdigit()]
+
+    is_wasm_match: bool = actual_output == expected_output
+    msg: str = f'Expected: {expected_output}. Actual: {actual_output}'
+
+    return is_wasm_match, msg
+
+

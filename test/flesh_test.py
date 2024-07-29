@@ -18,23 +18,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from test.cfg_utilities import all_cfg_and_language_combos
 
-
-# TODO: Refactor so run_wasm and run_wgsl use program as param
-
 def tst_generated_code(program,
                        input_directions: list[int],
-                       expected_output: list[int],
                        clear_files_after=True):
 
     language = program.get_language()
     code_filepath = program.get_file_path()
 
-    directions_filepath = f'{code_filepath.rsplit("/", 1)[0]}/directions.txt'
     output_filepath = f'{code_filepath.rsplit("/", 1)[0]}/output.txt'
-
-    if language == Language.WASM:  # temporarily not focusing on reducing IO / file handling for WASM as not noticeable bottleneck, unlike for WGSL
-        with open(directions_filepath, 'w') as file:
-            file.write(str(input_directions))
 
     try:
 
@@ -46,42 +37,23 @@ def tst_generated_code(program,
 
         # RUN
         if language == Language.WASM:
-            is_valid, msg = WASM.run_wasm(os.path.abspath(code_filepath), os.path.abspath(directions_filepath), os.path.abspath(output_filepath))
-            if not is_valid:
-                return False, msg
-            output_txt = ''
-            with open(output_filepath) as f:
-                for line in f:
-                    output_txt += line
-            cleaned_txt = re.sub(r'[^\d,]', '', output_txt)
-            actual_output = [int(x) for x in cleaned_txt.split(',') if x.strip().isdigit()]
-
-            is_wasm_match: bool = actual_output == expected_output
-            msg: str = f'Expected: {expected_output}. Actual: {actual_output}'
-
-            return is_wasm_match, msg
-
+            is_match, msg = WASM.run_wasm(program, input_directions, output_filepath)
         elif language == Language.WGSL:
-            is_match, msg = WGSL.run_wgsl(code_filepath, input_directions, expected_output, output_filepath)
-            return is_match, msg
-
+            is_match, msg = WGSL.run_wgsl(program, input_directions, output_filepath)
         elif language == Language.GLSL:
             is_match, msg = GLSL.run_glsl(program, input_directions)
-            return is_match, msg
+
+        return is_match, msg
 
     finally:
         if clear_files_after:
-            if os.path.exists(directions_filepath):
-                os.remove(directions_filepath)
             if os.path.exists(output_filepath):
                 os.remove(output_filepath)
 
 
 def test_direction(program, direction):
-    expected_output = program.cfg.expected_output_path(direction)
     match, msg = tst_generated_code(program,
                                     direction,
-                                    expected_output,
                                     clear_files_after=True)
     assert match, msg
 
