@@ -10,17 +10,20 @@ def wgsl_output_file_to_list(output_filepath) -> list[int]:
     cleaned_txt = re.sub(r'[^\d,]', '', output_txt)
     return [int(x) for x in cleaned_txt.split(',') if x.strip().isdigit()]
 
-def run_wgsl(code_filepath, input_directions: list[int], expected_output: list[int], output_filepath):
+def run_wgsl(program, input_directions: list[int], output_filepath):
 
     # Append 0 to handle edge case where input_directions is empty, ensuring shader uses the input_data binding
     input_directions.append(0)
 
     dir_arg = str(input_directions)
-    abs_path = os.path.abspath(code_filepath)
+    expected_path = program.cfg.expected_output_path(input_directions)
 
     # Run the WGSL script with Node.js
     command_successful, msg = run_subprocess(
-        command=['node', '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/runner/wgsl/run-wgsl-new.js', abs_path, dir_arg],
+        command=['node',
+                 '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/runner/wgsl/run-wgsl-new.js',
+                 program.get_file_path(),
+                 dir_arg],
         redirect_output=True,
         output_path=output_filepath
     )
@@ -28,7 +31,7 @@ def run_wgsl(code_filepath, input_directions: list[int], expected_output: list[i
         raise RuntimeError("node run-wgsl command was unsuccessful")
 
     # Compare the actual output with the expected output
-    actual_output = wgsl_output_file_to_list(output_filepath)
-    is_match = actual_output == expected_output
-    return is_match, f'Expected: {expected_output}. Actual: {actual_output}'
+    actual_path = wgsl_output_file_to_list(output_filepath)
+    is_match = actual_path == expected_path
+    return is_match, f'Expected: {expected_path}. Actual: {actual_path}'
 
