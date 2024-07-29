@@ -5,9 +5,11 @@ import pickle
 from datetime import timedelta, datetime
 import random
 
+from tqdm import tqdm
+
 from common import Language, generate_program, save_program
-from flesh_test import tst_generated_code
 from CFG import CFGGenerator
+from test import tst_generated_code
 
 
 def setup_logging(verbose: bool):
@@ -33,6 +35,8 @@ def generate_paths(cfg, graph_no, no_of_paths):
 
     paths_set = set()
 
+    aborted_path = False
+
     def within_time_limit():
         return datetime.now() - time_when_last_path_found < TIME_LIMIT
 
@@ -42,12 +46,13 @@ def generate_paths(cfg, graph_no, no_of_paths):
             time_when_last_path_found = datetime.now()
             paths_set.add(tuple(path))
 
-    logging.info(f'Paths for graph {graph_no}: {paths_set}')
+    logging.debug(f'Paths for graph {graph_no}: {paths_set}')
 
     if len(paths_set) < no_of_paths:
-        logging.info(f"Aborted path generation for CFG {graph_no} (>1 seconds since found a distinct path)")
+        aborted_path = True
+        # logging.info(f"Aborted path generation for CFG {graph_no} (>1 seconds since found a distinct path)")
 
-    return [list(path) for path in paths_set]
+    return [list(path) for path in paths_set], aborted_path
 
 
 def main():
@@ -69,8 +74,12 @@ def main():
     # parser.add_argument("--static_code_level", type=int)  # 0 = global memory, 1 = static
 
     args = parser.parse_args()
-    if args.folder is None:
-        args.folder = f'./{datetime.now().strftime("%Y/%m/%d, %H:%M")}, {args.language.name} TEST'
+    if args.output_folder is None:
+        args.output_folder = f'./{datetime.now().strftime("%Y-%m-%d, %H:%M:%S")}, ' \
+                             f'{args.language.name} ' \
+                             f'{("-" + args.opt_level) if args.opt_level else ""} '\
+                             '- TEST'
+
     if args.min_depth > args.max_depth:
         parser.error("min depth > max depth")
 
@@ -83,7 +92,7 @@ def main():
 
     logging.info("Creating folders...")
 
-    base_path = f'./{args.folder}'
+    base_path = f'./{args.output_folder}'
     cfg_filepath = f"{base_path}/cfgs"
     directions_filepath = f"{base_path}/paths"
     program_filepath = f"{base_path}/program_classes"
@@ -113,14 +122,21 @@ def main():
 
     logging.info("Generating directions...")
 
-    for i in range(args.no_of_graphs):
+    aborted_paths = []
+
+    for i in tqdm(range(args.no_of_graphs), desc="Generating directions"):
         cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
-        paths = generate_paths(cfg, graph_no=i, no_of_paths=args.no_of_paths)
+        paths, aborted_path = generate_paths(cfg, graph_no=i, no_of_paths=args.no_of_paths)
+
+        if aborted_path:
+            aborted_paths.append(i)
+
         pickle.dump(paths, open(f'{directions_filepath}/directions_{i}.pickle', "wb"))
 
-    logging.info("Fleshing CFGs... ")
+    if len(aborted_paths) > 0:
+        logging.debug(f"Aborted path generation for CFGs {aborted_paths} (>1 seconds since found a distinct path)")
 
-    for i in range(args.no_of_graphs):
+    for i in tqdm(range(args.no_of_graphs), desc="Fleshing CFGs"):
 
         cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
 
@@ -129,17 +145,14 @@ def main():
 
         pickle.dump(program, open(f'{program_filepath}/program_class_{i}.pickle', "wb"))
 
-
-    logging.info("Running tests... ")
-
-    for g in range(args.no_of_graphs):
-
-        logging.info(f"Testing graph {g}")
+    for g in tqdm(range(args.no_of_graphs), desc="Running tests"):
 
         g_passes_all_tests = True
 
         program = pickle.load(open(f'{program_filepath}/program_class_{g}.pickle', "rb"))
         paths = pickle.load(open(f'{directions_filepath}/directions_{g}.pickle', 'rb'))
+
+        bug_report_memos = []
 
         for p in range(len(paths)):
             direction = paths[p]
@@ -159,12 +172,15 @@ def main():
                     bug_file.write(f"Directions: {direction}\n\n")
                     bug_file.write(msg)
 
-                logging.info(f'Bug report written to {bug_filename}')
+                bug_report_memos.append(f'Bug found: report written to {bug_filename}')
 
         if g_passes_all_tests:
             os.remove(f'{cfg_filepath}/graph_{g}.pickle')
             os.remove(f'{directions_filepath}/directions_{g}.pickle')
             os.remove(f'{program_filepath}/program_class_{g}.pickle')
+
+        if len(bug_report_memos) > 0:
+            logging.info(bug_report_memos)
 
     logging.info("DONE!")
 
