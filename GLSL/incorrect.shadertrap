@@ -1,17 +1,17 @@
 GL 4.5
 
-CREATE_BUFFER directions SIZE_BYTES 4 INIT_VALUES uint 1
+CREATE_BUFFER directions SIZE_BYTES 4 INIT_VALUES uint 0
 
 CREATE_BUFFER actual_path SIZE_BYTES 16 INIT_VALUES
     uint 0 0 0 0
 
 CREATE_BUFFER expected_path SIZE_BYTES 16 INIT_VALUES
-    uint 1 2 4 0
+    uint 1 3 4 0
 
 BIND_SHADER_STORAGE_BUFFER BUFFER directions BINDING 0
 BIND_SHADER_STORAGE_BUFFER BUFFER actual_path BINDING 1
 
-DECLARE_SHADER test_shader KIND COMPUTE
+DECLARE_SHADER control_flow KIND COMPUTE
 #version 450
 
 layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
