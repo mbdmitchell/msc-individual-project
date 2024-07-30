@@ -7,7 +7,7 @@ import random
 
 from tqdm import tqdm
 
-from common import Language, generate_program, save_program
+from common import Language, generate_program, save_program, load_config
 from CFG import CFGGenerator
 from my_test import tst_generated_code
 
@@ -82,6 +82,8 @@ def main():
 
     if args.min_depth > args.max_depth:
         parser.error("min depth > max depth")
+
+    config = load_config()
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -158,6 +160,7 @@ def main():
             direction = paths[p]
             match, msg = tst_generated_code(program,
                                             direction,
+                                            config,
                                             clear_files_after=True)
 
             logging.debug(f'cfg_{g}_path_{p}: {match}, {msg}')

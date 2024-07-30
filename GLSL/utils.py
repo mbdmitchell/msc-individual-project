@@ -4,7 +4,7 @@ from GLSL import GLSLProgram
 from common import load_config
 
 
-def run_glsl(program: GLSLProgram, input_directions: list[int]) -> (bool, str):
+def run_glsl(program: GLSLProgram, input_directions: list[int], config) -> (bool, str):
 
     expected_path: list[int] = program.cfg.expected_output_path(input_directions)
     shadertrap_test: str = program.generate_shader_test(input_directions, expected_path)
@@ -13,7 +13,6 @@ def run_glsl(program: GLSLProgram, input_directions: list[int]) -> (bool, str):
         temp_file.write(shadertrap_test.encode('utf-8'))
         shadertrap_test_filepath = temp_file.name
 
-    config = load_config()
     shadertrap_exe_filepath = config['SHADERTRAP_PATH']
 
     result = subprocess.run([shadertrap_exe_filepath, shadertrap_test_filepath], capture_output=True, text=True)

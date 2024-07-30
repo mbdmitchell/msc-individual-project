@@ -1,6 +1,7 @@
 import pickle
 import sys
 
+from common import load_config
 from my_test.flesh_test import tst_generated_code
 
 def parse_directions(directions_str):
@@ -18,6 +19,7 @@ def main(program_class_path, directions_filepath):
 
     match, msg = tst_generated_code(program,
                                     direction,
+                                    load_config(),
                                     clear_files_after=True)
 
     print(match, msg)

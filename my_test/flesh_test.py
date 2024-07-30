@@ -14,6 +14,7 @@ from common import Language, generate_program, save_program
 
 def tst_generated_code(program,
                        input_directions: list[int],
+                       config,
                        clear_files_after=True):
 
     language = program.get_language()
@@ -35,7 +36,7 @@ def tst_generated_code(program,
         elif language == Language.WGSL:
             is_match, msg = WGSL.run_wgsl(program, input_directions, output_filepath)
         elif language == Language.GLSL:
-            is_match, msg = GLSL.run_glsl(program, input_directions)
+            is_match, msg = GLSL.run_glsl(program, input_directions, config)
 
         return is_match, msg
 
