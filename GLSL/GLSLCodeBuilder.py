@@ -141,7 +141,7 @@ class GLSLCodeBuilder(CodeBuilder):
         while (true) {{
             {loop_header}
             {cntrl}
-            if (cntl_val != 1) {{
+            if (cntrl_val != 1) {{
                 break;
             }}
             {loop_body}
