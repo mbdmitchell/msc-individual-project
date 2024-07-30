@@ -1,6 +1,30 @@
 from __future__ import annotations
+
+import json
+import os
 from typing import Optional
 from common import Language
+
+def load_config():
+    # Determine the path to the config.json file
+    script_dir = os.path.abspath(os.path.dirname(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, '..'))
+    config_path = os.path.join(project_root, 'config.json')
+
+    # Load the configuration data from config.json
+    try:
+        with open(config_path, 'r') as config_file:
+            config = json.load(config_file)
+        print("Configuration file loaded successfully.")
+    except FileNotFoundError:
+        print(f"Configuration file not found at {config_path}")
+        config = {}
+    except json.JSONDecodeError:
+        print(f"Error decoding JSON from the configuration file at {config_path}")
+        config = {}
+
+    return config
+
 
 def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_marker=';;', ) -> str:
 
