@@ -1,13 +1,12 @@
 import subprocess
 import tempfile
-
 from GLSL import GLSLProgram
 from common import load_config
 
 
-def run_glsl(program: GLSLProgram, input_directions: list[int]) -> bool:
+def run_glsl(program: GLSLProgram, input_directions: list[int]) -> (bool, str):
 
-    expected_path = program.cfg.expected_output_path(input_directions)
+    expected_path: list[int] = program.cfg.expected_output_path(input_directions)
     shadertrap_test: str = program.generate_shader_test(input_directions, expected_path)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix='.shadertrap') as temp_file:
@@ -19,4 +18,4 @@ def run_glsl(program: GLSLProgram, input_directions: list[int]) -> bool:
 
     result = subprocess.run([shadertrap_exe_filepath, shadertrap_test_filepath], capture_output=True, text=True)
 
-    return result.returncode == 0
+    return result.returncode == 0, result.stderr

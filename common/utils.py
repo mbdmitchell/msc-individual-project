@@ -1,26 +1,26 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Optional
 from common import Language
 
 def load_config():
-    # Determine the path to the config.json file
-    script_dir = os.path.abspath(os.path.dirname(__file__))
-    project_root = os.path.abspath(os.path.join(script_dir, '..'))
-    config_path = os.path.join(project_root, 'config.json')
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, '..', 'config.json')
 
     # Load the configuration data from config.json
     try:
         with open(config_path, 'r') as config_file:
             config = json.load(config_file)
-        print("Configuration file loaded successfully.")
+        logging.info("Configuration file loaded successfully.")
     except FileNotFoundError:
-        print(f"Configuration file not found at {config_path}")
+        logging.info(f"Configuration file not found at {config_path}")
         config = {}
     except json.JSONDecodeError:
-        print(f"Error decoding JSON from the configuration file at {config_path}")
+        logging.error(f"Error decoding JSON from the configuration file at {config_path}")
         config = {}
 
     return config

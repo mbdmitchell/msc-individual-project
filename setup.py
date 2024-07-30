@@ -18,6 +18,9 @@ setup(
     url='https://github.com/mbdmitchell/msc-individual-project',
     packages=find_packages(),
     include_package_data=True,
+    package_data={
+        '': ['config.json'],
+    },
     python_requires='>=3.9',
     install_requires=parse_requirements('requirements.txt'),
     test_suite='test',
