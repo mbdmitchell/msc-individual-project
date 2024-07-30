@@ -1,5 +1,7 @@
 from setuptools import setup, find_packages
 
+# python setup.py install
+# pip uninstall msc-control-flow-fleshing-project
 
 def parse_requirements(filename):
     with open(filename, 'r') as file:
