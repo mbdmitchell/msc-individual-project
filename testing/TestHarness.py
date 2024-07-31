@@ -61,17 +61,17 @@ def main():
     parser.add_argument("language", type=language_type, help="The language to use (e.g., wasm, wgsl, glsl)")
     parser.add_argument("no_of_graphs", type=int)
     parser.add_argument("no_of_paths", type=int)
+    # parser.add_argument("cfg_source", type=str) # generator, generator_with_param_shuffle, alloy
+    # parser.add_argument("static_code_level", type=int)  # 0 = global memory, 1 = static
 
     parser.add_argument("--opt_level", type=str, choices=["O", "O1", "O2", "O3", "O4", "Os", "Oz"], default=None,
                         help="Optimization level for WASM")
     parser.add_argument("--seed", type=int, help="Seed for randomness", default=None)
-
     parser.add_argument("--min_depth", type=int, default=3)
     parser.add_argument("--max_depth", type=int, default=5)
     parser.add_argument("--output_folder", type=str)
     parser.add_argument("--verbose", action="store_true", help="Print results for every test")
-    # parser.add_argument("--cfg_generation_approach", type=str)
-    # parser.add_argument("--static_code_level", type=int)  # 0 = global memory, 1 = static
+
 
     args = parser.parse_args()
     if args.output_folder is None:
@@ -184,6 +184,8 @@ def main():
 
         if len(bug_report_memos) > 0:
             logging.info(bug_report_memos)
+
+    # TODO: Add report.txt w/ all bugs (if any) found, any paths aborted, all harness params --min_depth=2 --max_depth=3
 
     logging.info("DONE!")
 
