@@ -172,7 +172,7 @@ fn control_flow( @builtin(global_invocation_id) id: vec3u ) {
 	cntrl_val = input_data[cntrl_ix];
 	loop {
 		// ------ BLOCK 2 -------
-		output_data[output_ix] = 2;							<-----
+		output_data[output_ix] = 2;
 		output_ix++;
 		// -----------------------
 		if cntrl_val != 1 {
@@ -302,7 +302,7 @@ fn control_flow( @builtin(global_invocation_id) id: vec3u ) {
 			break if cntrl_val == -1; // way to break out of a loop while in a switch (`break` in a switch just leaves switch)
 		}
 	}
-	// ------ BLOCK 15 -------                						<-----
+	// ------ BLOCK 15 -------
 	output_data[output_ix] = 15;
 	output_ix++;
 	// -----------------------
