@@ -8,14 +8,11 @@ def parse_directions(directions_str):
     return [int(x) for x in directions_str.split(',')]
 
 
-def main(program_class_path, directions_filepath):
+def main(program_class_path, directions_str):
 
     program = pickle.load(open(program_class_path, "rb"))
 
-    with open(directions_filepath, "r") as file:
-        dir_str = file.read()
-
-    direction = parse_directions(dir_str)
+    direction = parse_directions(directions_str)
 
     match, msg = tst_generated_code(program,
                                     direction,
@@ -31,6 +28,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     program_class_filepath = sys.argv[1]
-    directions_filepath = sys.argv[2]
+    directions_str = sys.argv[2]
 
-    main(program_class_filepath, directions_filepath)
+    main(program_class_filepath, directions_str)
