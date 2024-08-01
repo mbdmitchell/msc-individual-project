@@ -7,6 +7,7 @@ import random
 
 from tqdm import tqdm
 
+from CFG.CFGGenerator import GeneratorConfig
 from common import Language, generate_program, save_program, load_config
 from CFG import CFGGenerator
 from my_test import tst_generated_code
@@ -20,6 +21,7 @@ def setup_logging(verbose: bool):
         root_logger.handlers.clear()
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO, format=log_format)
 
+
 def language_type(language_str):
     try:
         return Language[language_str.upper()]
@@ -28,8 +30,7 @@ def language_type(language_str):
             f"Invalid language: {language_str}. Choose from {[l.name.lower() for l in Language]}.")
 
 
-def generate_paths(cfg, graph_no, no_of_paths):
-
+def generate_cfg_paths(cfg, graph_no, no_of_paths):
     time_when_last_path_found = datetime.now()
     TIME_LIMIT = timedelta(seconds=1)
 
@@ -55,13 +56,61 @@ def generate_paths(cfg, graph_no, no_of_paths):
     return [list(path) for path in paths_set], aborted_path
 
 
-def main():
+def generate_cfgs(args, cfg_filepath: str):
+    if args.cfg_source == 'random':
 
+        generator_config = GeneratorConfig.allow_all(args.language)
+
+        CFGGenerator(generator_config).generate_cfgs_method_uniform(target_filepath=cfg_filepath,
+                                                                    no_of_graphs=args.no_of_graphs,
+                                                                    min_depth=args.min_depth,
+                                                                    max_depth=args.max_depth)
+
+    elif args.cfg_source == 'swarm':
+
+        CFGGenerator.generate_cfgs_method_swarm(language=args.language,
+                                                target_filepath=cfg_filepath,
+                                                no_of_graphs=args.no_of_graphs,
+                                                min_depth=args.min_depth,
+                                                max_depth=args.max_depth)
+
+    else:
+        raise ValueError("cfg_source not handled")  # shouldn't get here anyway 'cause throws if invalid at start
+
+
+def generate_direction_paths(args, cfg_filepath, directions_filepath):
+
+        aborted_paths = []
+
+        for i in tqdm(range(args.no_of_graphs), desc="Generating directions"):
+            cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
+            paths, aborted_path = generate_cfg_paths(cfg, graph_no=i, no_of_paths=args.no_of_paths)
+
+            if aborted_path:
+                aborted_paths.append(i)
+
+            pickle.dump(paths, open(f'{directions_filepath}/directions_{i}.pickle', "wb"))
+
+        if len(aborted_paths) > 0:
+            logging.debug(f"Aborted path generation for CFGs {aborted_paths} (>1 seconds since found a distinct path)")
+
+# TODO: Refactor: In a large testing campaign, you wouldn't want to necessarily generate 1,000,000+ CFGs, THEN all paths
+#   , THEN test. Refactor so (1) parallelisable (2) tidies as you go so dont need folder w/ a bajillion files
+
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("language", type=language_type, help="The language to use (e.g., wasm, wgsl, glsl)")
     parser.add_argument("no_of_graphs", type=int)
     parser.add_argument("no_of_paths", type=int)
-    # parser.add_argument("cfg_source", type=str) # generator, generator_with_param_shuffle, alloy
+    parser.add_argument("cfg_source",
+                        type=str,
+                        choices=["random", "swarm"],
+                        help=(
+                            "Specify the source for configuration generation:\n"
+                            "- 'random': Generates a truly random configuration.\n"
+                            "- 'swarm': Uses a random subset of possible features; used for swarm testing."
+                        ))
     # parser.add_argument("static_code_level", type=int)  # 0 = global memory, 1 = static
 
     parser.add_argument("--opt_level", type=str, choices=["O", "O1", "O2", "O3", "O4", "Os", "Oz"], default=None,
@@ -72,12 +121,11 @@ def main():
     parser.add_argument("--output_folder", type=str)
     parser.add_argument("--verbose", action="store_true", help="Print results for every test")
 
-
     args = parser.parse_args()
     if args.output_folder is None:
         args.output_folder = f'./{datetime.now().strftime("%Y-%m-%d, %H:%M:%S")}, ' \
                              f'{args.language.name} ' \
-                             f'{("-" + args.opt_level) if args.opt_level else ""} '\
+                             f'{("-" + args.opt_level) if args.opt_level else ""} ' \
                              '- TEST'
 
     if args.min_depth > args.max_depth:
@@ -111,35 +159,12 @@ def main():
         os.makedirs(directory, exist_ok=True)
 
     logging.info("Generating CFGs...")
-
-    CFGGenerator().generate_cfgs(target_filepath=cfg_filepath,
-                                 no_of_graphs=args.no_of_graphs,
-                                 min_depth=3,
-                                 max_depth=4,
-                                 min_successors=2,
-                                 max_successors=5,
-                                 allow_fallthrough=Language.allows_switch_fallthrough(args.language),
-                                 is_complex=True,
-                                 break_continue_probability=1)
+    generate_cfgs(args, cfg_filepath)
 
     logging.info("Generating directions...")
-
-    aborted_paths = []
-
-    for i in tqdm(range(args.no_of_graphs), desc="Generating directions"):
-        cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
-        paths, aborted_path = generate_paths(cfg, graph_no=i, no_of_paths=args.no_of_paths)
-
-        if aborted_path:
-            aborted_paths.append(i)
-
-        pickle.dump(paths, open(f'{directions_filepath}/directions_{i}.pickle', "wb"))
-
-    if len(aborted_paths) > 0:
-        logging.debug(f"Aborted path generation for CFGs {aborted_paths} (>1 seconds since found a distinct path)")
+    generate_direction_paths(args, cfg_filepath, directions_filepath)
 
     for i in tqdm(range(args.no_of_graphs), desc="Fleshing CFGs"):
-
         cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
 
         program = generate_program(args.language, cfg)
@@ -166,7 +191,6 @@ def main():
             logging.debug(f'cfg_{g}_path_{p}: {match}, {msg}')
 
             if not match:
-
                 g_passes_all_tests = False
 
                 bug_filename = f'{bugs_filepath}/{program.language.extension()}_bug_cfg_{g}_path{p}.txt'
@@ -181,13 +205,13 @@ def main():
             os.remove(f'{cfg_filepath}/graph_{g}.pickle')
             os.remove(f'{directions_filepath}/directions_{g}.pickle')
             os.remove(f'{program_filepath}/program_class_{g}.pickle')
+            os.remove(f'{code_filepath}/code_{g}.{args.langauge.extension()}')
 
         if len(bug_report_memos) > 0:
             logging.info(bug_report_memos)
 
-    # TODO: Add report.txt w/ all bugs (if any) found, any paths aborted, all harness params --min_depth=2 --max_depth=3
-
     logging.info("DONE!")
+    # TODO: Add report.txt w/ all bugs (if any) found, any paths aborted, all harness params --min_depth=2 --max_depth=3
 
 
 if __name__ == "__main__":

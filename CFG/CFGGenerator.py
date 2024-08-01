@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import pickle
 import queue
 import random
@@ -8,17 +9,19 @@ from datetime import timedelta, datetime
 from CFG import CFG
 import networkx as nx
 
+from common import Language
+
 
 class BlockData:
     """
     A helper class to manage block data and ensure parameter order is maintained.
 
-    Attributes:
-        block (int): The block identifier.
-        outer_merge (int | None): The outer merge block identifier, if any.
-        outer_header (int | None): The outer header block identifier, if any.
-        current_depth (int): The current depth of the block in the control flow graph.
+    block (int): The block identifier.
+    outer_merge (int | None): The outer merge block identifier, if any.
+    outer_header (int | None): The outer header block identifier, if any.
+    current_depth (int): The current depth of the block in the control flow graph.
     """
+
     def __init__(self, block: int, outer_merge: int | None, outer_header: int | None, current_depth: int):
         self._block = block
         self._outer_merge = outer_merge
@@ -42,6 +45,7 @@ class BlockData:
 
     def current_depth(self):
         return self._current_depth
+
 
 # NB: I have intentionally not make a `RelatedBlocks` parent class.
 # "Premature inheritance is the root of all evil" -- not Knuth
@@ -105,41 +109,82 @@ class RelatedBlocksLoop:
         return self._merge_block
 
 
-def _generate_cfg(seed,
-                  depth,
-                  is_complex: bool,
-                  allow_fallthrough: bool,
-                  min_successors, max_successors,
-                  verbose=False,
-                  break_continue_probability=0.0):
+class GeneratorConfig:
+    """Dictates which CFG features are and aren't allowed in the CFG generation"""
 
-    random.seed(seed)
-    generator = CFGGenerator()._add_simple_cfg(depth, allow_fallthrough, min_successors, max_successors)
+    def __init__(self,
+                 basic: bool,
+                 loop: bool,
+                 selection: bool,
+                 switch_fallthrough: bool,
+                 switch_default: bool,
+                 break_: bool,
+                 continue_: bool):
+        self.allow_basic = basic
+        self.allow_loop = loop
+        self.allow_selection = selection
+        self.allow_switch_fallthrough = switch_fallthrough
+        self.allow_switch_default = switch_default
+        self.allow_break = break_
+        self.allow_continue = continue_
 
-    if is_complex:
-        generator = generator._add_breaks_and_continues(break_continue_probability)
+    @staticmethod
+    def allow_all(languge: Language) -> 'GeneratorConfig':
+        """Allow all options for a given language"""
+        return GeneratorConfig(basic=True,
+                               loop=True,
+                               selection=True,
+                               switch_fallthrough=Language.allows_switch_fallthrough(languge),
+                               switch_default=True,
+                               break_=True,
+                               continue_=True)
 
-    cfg = generator.get_cfg()
-
-    if not verbose:
-        return cfg
-
-    # verbose
-    for node in cfg.nodes(data=True):
-        print(node)
-    for node in cfg.nodes():
-        print(node, cfg.out_edges(node))
-
-    return cfg
+    @staticmethod
+    def random(languge: Language) -> 'GeneratorConfig':
+        return GeneratorConfig(random.choice([True, False]),
+                               random.choice([True, False]),
+                               random.choice([True, False]),
+                               random.choice([Language.allows_switch_fallthrough(languge), False]),
+                               random.choice([True, False]),
+                               random.choice([True, False]),
+                               random.choice([True, False]))
 
 
 class CFGGenerator:
 
-    def __init__(self):
+    def __init__(self, generator_config=None):
+        self._generator_config = generator_config
         self._next_id = 2
-        graph = CFGGenerator._empty_graph(1)
-        self._cfg = CFG(graph=graph, entry_block=1)
+        self._cfg = CFG(graph=CFGGenerator._empty_graph(1), entry_block=1)
         self.visited_blocks = set()
+
+    def _reset(self):
+        self._next_id = 2
+        self._cfg = CFG(graph=CFGGenerator._empty_graph(1), entry_block=1)
+        self.visited_blocks = set()
+
+    @property
+    def _allowed_construct_functions(self):
+        construct_conditions = [
+            (self._generator_config.allow_selection, self._make_selection),
+            (self._generator_config.allow_loop, self._make_loop),
+            (self._generator_config.allow_switch_default or self._generator_config.allow_switch_fallthrough,
+             self._make_switch),
+            (self._generator_config.allow_basic, self._make_basic)
+        ]
+        return [construct for condition, construct in construct_conditions if condition]
+
+    @property
+    def _allowed_break_continue_functions(self):
+        conditions = [
+            (self._generator_config.allow_break, self._add_break),
+            (self._generator_config.allow_continue, self._add_continue)
+        ]
+        return [construct for condition, construct in conditions if condition]
+
+    @property
+    def _is_allowed_break_or_continue(self):
+        return len(self._allowed_break_continue_functions) != 0
 
     def _get_id(self) -> int:
         val = self._next_id
@@ -153,26 +198,25 @@ class CFGGenerator:
 
     @staticmethod
     def _empty_graph(no_of_nodes: int, create_using=nx.MultiDiGraph):
-        return nx.empty_graph(range(1, no_of_nodes+1), create_using)
+        return nx.empty_graph(range(1, no_of_nodes + 1), create_using)
 
     def _move_block_successors_to(self, source, target):
-        block_successors = self._cfg.out_edges_destinations(source)
+        block_successors = self.get_cfg().out_edges_destinations(source)
         if len(block_successors) == 0:
             return
         if target in block_successors:
             block_successors.remove(target)
-        self._cfg.add_successors(block_successors, target)
-        self._cfg.remove_edges_from(list(self._cfg.out_edges(source)))
+        self.get_cfg().add_successors(block_successors, target)
+        self.get_cfg().remove_edges_from(list(self.get_cfg().out_edges(source)))
 
-    def _choose_merge_block(self, block_data: BlockData, probability_function=None):
+    def _choose_merge_block(self, block_data: BlockData):
+        # TODO: add merge behaviour to generator_config
         if not (block_data.outer_header() or block_data.outer_merge()):
             merge_with_outer = False
-        elif not self._cfg.is_loop_header(block_data.outer_header()):
+        elif not self.get_cfg().is_loop_header(block_data.outer_header()):
             merge_with_outer = False
-        elif probability_function is None:
-            merge_with_outer = random.choice([True, False]) if block_data.outer_merge() else False
         else:
-            merge_with_outer = probability_function()
+            merge_with_outer = random.choice([block_data.outer_merge(), False])
 
         return block_data.outer_merge() if merge_with_outer else self._get_id()
 
@@ -189,7 +233,7 @@ class CFGGenerator:
         self._move_block_successors_to(source=block_data.block(), target=new_block)
 
         block: int = block_data.block()
-        self._cfg.add_edge(block, new_block)
+        self.get_cfg().add_edge(block, new_block)
 
         return [new_block]
 
@@ -226,7 +270,7 @@ class CFGGenerator:
 
         return RelatedBlocksSelection(false_block, true_block, merge_block)
 
-    def _make_switch(self, block_data: BlockData, no_of_branches, allow_fallthrough: bool) -> RelatedBlocksSwitch:
+    def _make_switch(self, block_data: BlockData, no_of_branches) -> RelatedBlocksSwitch:
         """
         Adds a switch construct with possible fallthrough to the control flow graph.
 
@@ -247,7 +291,7 @@ class CFGGenerator:
 
         block = block_data.block()
 
-        cases = [self._get_id() for _ in range(no_of_branches-1)]
+        cases = [self._get_id() for _ in range(no_of_branches - 1)]
         default_branch = self._get_id()
 
         merge_block = self._choose_merge_block(block_data)  # TODO: in tree-like switches, merge_block == default block
@@ -258,7 +302,7 @@ class CFGGenerator:
 
             self._cfg.add_edge(block, cases[ix])
 
-            if allow_fallthrough:
+            if self._generator_config.allow_switch_fallthrough:
                 fallthrough = random.choice([True, False])
             else:
                 fallthrough = False
@@ -313,24 +357,26 @@ class CFGGenerator:
 
         return RelatedBlocksLoop(true_block, merge_block)
 
-    def _build_rand_construct(self, block_data: BlockData, allow_fallthrough: bool, min_successors, max_successors):
-        """
-        Randomly selects and constructs a control flow graph construct.
-
-        The function randomly chooses one of the following constructs: selection, loop, switch, or basic.
-        If a switch construct is chosen, it will include a random number of branches within the specified range.
-        """
-        choice = random.choice([self._make_selection, self._make_loop, self._make_switch, self._make_basic])
-        if choice == self._make_switch:
-            return choice(block_data, random.randint(min_successors, max_successors), allow_fallthrough)
-        else:
-            return choice(block_data)
-
     def get_cfg(self):
         return self._cfg
 
-    def _add_simple_cfg(self, depth, allow_fallthrough: bool, min_successors, max_successors):
-        """Loops, selections, and switches. No continues or breaks."""
+    # -----------------------------------------------------------------------------------------------------------------
+
+    def build_random_construct(self, block_data, min_successors, max_successors):
+
+        if len(self._allowed_construct_functions) == 0:
+            return None
+
+        choice = random.choice(self._allowed_construct_functions)
+        if choice == self._make_switch:
+            return choice(block_data, random.randint(min_successors, max_successors))
+        else:
+            return choice(block_data)
+
+    def generate(self, depth, min_successors, max_successors):
+
+        self._reset()
+
         blocks = queue.Queue()
         blocks.put(BlockData(block=1, outer_merge=None, outer_header=None, current_depth=0))
 
@@ -341,7 +387,7 @@ class CFGGenerator:
             if block_data.current_depth() < depth:
                 if block_data.block() in self.visited_blocks:
                     continue
-                next_blocks = self._build_rand_construct(block_data, allow_fallthrough, min_successors, max_successors)
+                next_blocks = self.build_random_construct(block_data, min_successors, max_successors)
                 self._visit(block_data.block())
                 for nb in next_blocks:
                     if nb in self.visited_blocks:
@@ -350,33 +396,40 @@ class CFGGenerator:
                                          outer_merge=block_data.outer_merge(),
                                          outer_header=block_data.outer_header(),
                                          current_depth=block_data.current_depth() + 1))
-        return self
+
+        self._remove_all_self_loops()  # TODO: don't *think* this is needed now, it's harmless so keep until can know
+        self._add_breaks_and_continues(insert_probability=1)
+
+        return self.get_cfg()
+
+    # -----------------------------------------------------------------------------------------------------------------
 
     def _remove_all_self_loops(self):
-        """There is a rare bug that causes unintended self loops to be created. This fn removes them until
+        """There is (was?) a rare bug that causes unintended self loops to be created. This fn removes them until
         the root cause can be addressed"""
-        for n in self._cfg.nodes():
-            while (n, n) in self._cfg.graph.edges(n):
-                self._cfg.remove_edge(n, n)
+        for n in self.get_cfg().nodes():
+            while (n, n) in self.get_cfg().graph.edges(n):
+                self.get_cfg().remove_edge(n, n)
 
     def _add_continue(self, block, loop_header):
-        edges = list(self._cfg.graph.edges(nbunch=block))
-        self._cfg.graph.remove_edges_from(ebunch=edges)
-        self._cfg.add_edge(block, loop_header)
-        self._cfg.add_node_attribute(block, 'ContinueBlock', True)
+        edges = list(self.get_cfg().graph.edges(nbunch=block))
+        self.get_cfg().graph.remove_edges_from(ebunch=edges)
+        self.get_cfg().add_edge(block, loop_header)
+        self.get_cfg().add_node_attribute(block, 'ContinueBlock', True)
 
     def _add_break(self, block, loop_header):
-        merge_block = self._cfg.merge_block(loop_header)
-        edges = list(self._cfg.graph.edges(nbunch=block))
-        self._cfg.graph.remove_edges_from(ebunch=edges)
-        self._cfg.add_edge(block, merge_block)
-        self._cfg.add_node_attribute(block, 'BreakBlock', True)
+        merge_block = self.get_cfg().merge_block(loop_header)
+        edges = list(self.get_cfg().graph.edges(nbunch=block))
+        self.get_cfg().graph.remove_edges_from(ebunch=edges)
+        self.get_cfg().add_edge(block, merge_block)
+        self.get_cfg().add_node_attribute(block, 'BreakBlock', True)
 
     def _add_breaks_and_continues(self, insert_probability: float):
 
-        self._remove_all_self_loops()  # temp bug fix
+        if not self._is_allowed_break_or_continue:
+            return self
 
-        loop_headers = [block for block in self._cfg.nodes() if self._cfg.is_loop_header(block)]
+        loop_headers = [block for block in self.get_cfg().nodes() if self.get_cfg().is_loop_header(block)]
 
         if len(loop_headers) == 0:
             return self
@@ -384,8 +437,9 @@ class CFGGenerator:
         for header in loop_headers:
 
             visited = set()
+
             def is_sole_inblock_for_a_dst_block(block):  # dst block(s) all have multiple blocks pointing to it
-                return all(len(self._cfg.in_edges_nx_count(dst)) > 1 for dst in self._cfg.out_edges_destinations(block))
+                return all(len(self.get_cfg().in_edges_nx_count(dst)) > 1 for dst in self.get_cfg().out_edges_destinations(block))
 
             def out_dst_equals_loop_header(block):
                 """true iff out_degree = 1 and the dst = loop header"""
@@ -393,11 +447,9 @@ class CFGGenerator:
                     return False
                 return self.get_cfg().out_edges_destinations(block)[0] == header
 
-            # todo: replace all self._cfg with self.get_cfg() where poss.
-
             # calc all blocks in true branch before the merge block (or another loop header)
 
-            true_branch_block = self._cfg.out_edges_destinations(header)[1]
+            true_branch_block = self.get_cfg().out_edges_destinations(header)[1]
 
             q = queue.Queue()
             q.put(true_branch_block)
@@ -407,57 +459,37 @@ class CFGGenerator:
                 current_block = q.get()
 
                 if current_block in visited \
-                        or self._cfg.merge_block(header) == current_block \
-                        or self._cfg.is_loop_header(current_block) \
-                        or (not self._cfg.is_end_node(current_block)
-                            and self._cfg.out_edges_destinations(current_block)[0] != header):
+                        or self.get_cfg().merge_block(header) == current_block \
+                        or self.get_cfg().is_loop_header(current_block) \
+                        or (not self.get_cfg().is_end_node(current_block)
+                            and self.get_cfg().out_edges_destinations(current_block)[0] != header):
                     continue
 
                 visited.add(current_block)
 
                 if not (is_sole_inblock_for_a_dst_block(current_block)
-                        or self._cfg.is_header_block(current_block)
+                        or self.get_cfg().is_header_block(current_block)
                         or out_dst_equals_loop_header(current_block)):
 
                     # do thing with that block, e.g. add break or continue
                     if insert_probability > random.random():
-                        br_or_cnt = random.choice([self._add_break, self._add_continue])
+                        br_or_cnt = random.choice(self._allowed_break_continue_functions)
                         br_or_cnt(current_block, header)
 
                 # add its successors
-                for dst in self._cfg.out_edges_destinations(current_block):
+                for dst in self.get_cfg().out_edges_destinations(current_block):
                     if dst not in visited:
                         q.put(dst)
 
         return self
 
-    def generate_simple(self, seed, depth, allow_fallthrough: bool, verbose=False):
-        return _generate_cfg(seed, depth, is_complex=False, allow_fallthrough=allow_fallthrough, verbose=verbose)
-
-    def generate_complex(self, seed, depth, allow_fallthrough: bool, break_continue_probability: float, verbose=False):
-        return _generate_cfg(
-            seed=seed,
-            depth=depth,
-            is_complex=True,
-            allow_fallthrough=allow_fallthrough,
-            break_continue_probability=break_continue_probability,
-            verbose=verbose
-        )
-
-    def generate_cfgs(self,
-                      target_filepath: str,
-                      no_of_graphs: int,
-                      min_depth: int,
-                      max_depth: int,
-                      min_successors: int,
-                      max_successors: int,
-                      allow_fallthrough: bool,
-                      is_complex: bool = True,
-                      break_continue_probability: float = 0.0,
-                      seed: int = None):
+    def generate_cfgs_method_uniform(self,
+                                     target_filepath: str,
+                                     no_of_graphs: int,
+                                     min_depth: int,
+                                     max_depth: int):
 
         rand = random.Random()
-        rand.seed(seed)
 
         generated_hashes = set()
         TIME_LIMIT = timedelta(seconds=5)  # if it can't generate a new CFG in TIME_LIMIT, early return.
@@ -465,19 +497,57 @@ class CFGGenerator:
         for i in range(no_of_graphs):
 
             start_time = datetime.now()
-            while True:
-                if datetime.now() - start_time > TIME_LIMIT:
-                    print(f"Aborted graph generation for graph {i} (>{TIME_LIMIT} elapsed)")
-                    return  # or continue, if you want to skip this CFG and try the next one
+
+            found_new_cfg = False
+            while datetime.now() - start_time < TIME_LIMIT:
 
                 depth = rand.randint(min_depth, max_depth)
-                cfg = _generate_cfg(seed, depth, is_complex, allow_fallthrough, min_successors, max_successors,
-                                         False, break_continue_probability)
+                cfg = self.generate(depth, min_successors=3, max_successors=5)
                 cfg_hash = hash(cfg)
+
                 if cfg_hash not in generated_hashes:
+                    found_new_cfg = True
                     generated_hashes.add(cfg_hash)
+                    with open(f'{target_filepath}/graph_{i}.pickle', "wb") as f:
+                        pickle.dump(cfg, f)
                     break
 
-            with open(f'{target_filepath}/graph_{i}.pickle', "wb") as f:
-                pickle.dump(cfg, f)
+            if not found_new_cfg:
+                logging.info(f"Aborted graph generation (>{TIME_LIMIT} elapsed)")
+                return
 
+    @staticmethod
+    def generate_cfgs_method_swarm(language,
+                                   target_filepath,
+                                   no_of_graphs,
+                                   min_depth,
+                                   max_depth):
+
+        rand = random.Random()
+
+        generated_hashes = set()
+        TIME_LIMIT = timedelta(seconds=5)  # if it can't generate a new CFG in TIME_LIMIT, early return.
+
+        for i in range(no_of_graphs):
+
+            start_time = datetime.now()
+            found_new_cfg = False
+
+            while datetime.now() - start_time < TIME_LIMIT:
+
+                cfg_generator = CFGGenerator(GeneratorConfig.random(language))
+
+                depth = rand.randint(min_depth, max_depth)
+                cfg = cfg_generator.generate(depth, min_successors=3, max_successors=5)
+                cfg_hash = hash(cfg)
+
+                if cfg_hash not in generated_hashes:
+                    found_new_cfg = True
+                    generated_hashes.add(cfg_hash)
+                    with open(f'{target_filepath}/graph_{i}.pickle', "wb") as f:
+                        pickle.dump(cfg, f)
+                    break
+
+            if not found_new_cfg:
+                logging.info(f"Aborted graph generation (>{TIME_LIMIT} elapsed)")
+                return

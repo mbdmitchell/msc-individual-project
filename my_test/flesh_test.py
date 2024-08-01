@@ -9,6 +9,7 @@ import WASM
 import WGSL
 
 from CFG import CFGGenerator
+from CFG.CFGGenerator import GeneratorConfig
 from .cfg_utilities import all_cfg_and_language_combos
 from common import Language, generate_program, save_program
 
@@ -95,13 +96,7 @@ def test_generated_cfgs(seed, language, tested_configs):
 
     random.seed(seed)
 
-    cfg = CFGGenerator().generate_complex(
-        seed=seed,
-        depth=4,
-        break_continue_probability=1,
-        allow_fallthrough=Language.allows_switch_fallthrough(language),
-        verbose=True
-    )
+    cfg = CFGGenerator(generator_config=GeneratorConfig.allow_all(language)).generate(4, 3, 5)
 
     test_cfg(cfg, language)
     tested_configs.add((seed, language))
