@@ -179,6 +179,37 @@ def cfg_while_2_nested() -> CFG:
     return cfg
 
 
+def cfg_while_3_nested() -> CFG:
+    """
+      +----->1-------------+
+      |      v             |
+      | +--->2------+      v
+      | |    |      |      7
+      | |    v      |
+      | | +->3--+   |
+      | | |  |  |   |
+      | | |  V  |   |
+      | | +--4  |   |
+      | |       |   |
+      | |       |   |
+      | +----5<-+   |
+      |             |
+      +------6<-----+
+        """
+    g = _generate_multi_di_graph_from_edges([(1, 7), (1, 2), (2, 6), (2, 3), (3, 5), (3, 4), (4, 3), (5, 2), (6, 1)])
+    cfg = CFG.CFG(graph=g, entry_block=1)
+    cfg.add_node_attribute(1, 'SelectionHeader', True)
+    cfg.add_node_attribute(1, 'LoopHeader', True)
+    cfg.add_node_attribute(1, 'Merge', 7)
+    cfg.add_node_attribute(2, 'SelectionHeader', True)
+    cfg.add_node_attribute(2, 'LoopHeader', True)
+    cfg.add_node_attribute(2, 'Merge', 6)
+    cfg.add_node_attribute(3, 'SelectionHeader', True)
+    cfg.add_node_attribute(3, 'LoopHeader', True)
+    cfg.add_node_attribute(3, 'Merge', 5)
+    return cfg
+
+
 def cfg_early_1_continue() -> CFG:
     """ Early continue on $6
           1

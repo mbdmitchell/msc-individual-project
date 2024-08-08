@@ -12,6 +12,7 @@ from .example_CFGs import (
     cfg_if_5_nested,
     cfg_while_1,
     cfg_while_2_nested,
+    cfg_while_3_nested,
     cfg_early_1_continue,
     cfg_early_2_break,
     cfg_early_3_continue_and_break_in_switch,

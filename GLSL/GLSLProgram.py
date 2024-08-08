@@ -1,38 +1,61 @@
 from __future__ import annotations
 
+import logging
 import os
+from typing import Optional
+
 import CFG
 
 from enum import Enum
 
-from common.Language import Language
-from common.Program import Program
-from GLSL import GLSLCodeBuilder
+from languages import GLSLLang
+from my_common.CodeType import CodeType
+from my_common.Program import Program
+from code_builders import CodeBuilderFactory
 
-def _list_to_space_separated_values(values: list[int]) -> str:
-    return ' '.join(map(str, values))
 
-def _generate_shader_test_aux(shader_code, input_directions, expected_path) -> str:
+def _list_to_space_separated_values(values: Optional[list[int]]) -> str:
 
-    path_buffer_size = len(expected_path) + 1  # +1 so can detect if somehow actual_path starts identically to expected_path but has extra elems
+    if not values:
+        return ''
+
+    logging.debug("VALUES:", values)
+    return str(' '.join(map(str, values)))
+
+
+def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_directions=Optional[list[int]],
+                              expected_path=list[int]) -> str:
+    is_global_code_type = code_type == CodeType.GLOBAL_ARRAY
+
+    # +1 so can detect if somehow actual_path starts identically to expected_path but has extra elems
+    path_buffer_size = len(expected_path) + 1
+
     path_buffer_size_in_bytes = path_buffer_size * 4  # 32-bit uints
-    directions_size_in_bytes = len(input_directions) * 4
+    directions_size_in_bytes = 0 if not input_directions else len(input_directions) * 4
+
+    directions_array_buffer = f"CREATE_BUFFER directions SIZE_BYTES {directions_size_in_bytes} INIT_VALUES uint {_list_to_space_separated_values(input_directions)}\n"
+    directions_binding = "BIND_SHADER_STORAGE_BUFFER BUFFER directions BINDING 1"
+    directions_layout_binding = "layout(std430, binding = 1) buffer directions {\n\tuint inputData[];\n};"
 
     return """GL 4.5
-
-CREATE_BUFFER directions SIZE_BYTES {directions_size_in_bytes} INIT_VALUES uint {directions}
 
 CREATE_BUFFER actual_path SIZE_BYTES {path_size_in_bytes} INIT_VALUES
     uint {buffer_full_of_zeros}
 
-CREATE_BUFFER expected_path SIZE_BYTES {path_size_in_bytes} INIT_VALUES
+{directions_array_buffer}CREATE_BUFFER expected_path SIZE_BYTES {path_size_in_bytes} INIT_VALUES
     uint {expected_path_padded_with_zeros}
 
-BIND_SHADER_STORAGE_BUFFER BUFFER directions BINDING 0
-BIND_SHADER_STORAGE_BUFFER BUFFER actual_path BINDING 1
-
+BIND_SHADER_STORAGE_BUFFER BUFFER actual_path BINDING 0
+{directions_binding}
 DECLARE_SHADER control_flow KIND COMPUTE
-{shader_code}
+#version 450
+
+layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
+
+layout(std430, binding = 0) buffer actual_path {{
+    uint outputData[];
+}};
+{directions_layout_binding}{shader_code}
 
 END
 
@@ -44,31 +67,49 @@ RUN_COMPUTE
     NUM_GROUPS 1 1 1
 
 ASSERT_EQUAL BUFFERS expected_path actual_path""".format(
+        directions_layout_binding=directions_layout_binding + '\n' if is_global_code_type else "",
+        directions_array_buffer=directions_array_buffer + '\n' if is_global_code_type else "",
+        directions_binding=directions_binding + '\n' if is_global_code_type else "",
         shader_code=shader_code,
-        directions_size_in_bytes=directions_size_in_bytes,
-        directions=_list_to_space_separated_values(input_directions),
         path_size_in_bytes=path_buffer_size_in_bytes,
         buffer_full_of_zeros=_list_to_space_separated_values([0] * path_buffer_size),
-        expected_path_padded_with_zeros=_list_to_space_separated_values(expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path)))
+        expected_path_padded_with_zeros=_list_to_space_separated_values(
+            expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path))
+        )
     )
 
-class GLSLProgram(Program):
 
+class GLSLProgram(Program):
     class OutputType(Enum):
         COMP_SHADER = 0,
         SHADER_TEST = 1
-    def __init__(self, cfg: CFG):
-        super().__init__(cfg)
-        self.builder = GLSLCodeBuilder.GLSLCodeBuilder(cfg)
-        self._code = self.builder.build_code()
-        self.language = Language.GLSL
 
-    def generate_shader_test(self, input_directions, expected_path: list[int] | None = None) -> str:
+    def __init__(self, cfg: CFG, code_type: CodeType, directions: Optional[list[int]] = None):
+        super().__init__(cfg)
+        self.code_type = code_type
+        self.builder = CodeBuilderFactory.create_builder(GLSLLang(), self.cfg, self.code_type, directions)
+        self._code = self.builder.build_code()
+        self.language = GLSLLang()
+
+    def generate_shader_test(self, input_directions: Optional[list[int]] = None,
+                             expected_path: Optional[list[int]] = None) -> str:
         # Optional expected_path to allow for generating (intentionally) incorrect shadertrap tests.
+        # Optional input_directions as not needed for CodeType.STATIC programs as path is built in to the code
+        if self.code_type == CodeType.GLOBAL_ARRAY:
+
+            if not input_directions:
+                raise ValueError("Missing input_directions")
+
+        elif self.code_type == CodeType.STATIC:
+
+            if not (expected_path or input_directions):
+                raise ValueError("Need either expected_path or input_directions to generate shader test")
+
         if not expected_path:
             expected_path = self.cfg.expected_output_path(input_directions)
         return _generate_shader_test_aux(
             shader_code=self.get_code(),
+            code_type=self.code_type,
             input_directions=input_directions,
             expected_path=expected_path
         )

@@ -4,7 +4,9 @@ import json
 import logging
 import os
 from typing import Optional
-from common import Language
+
+from my_common import CodeType
+
 
 def load_config():
 
@@ -71,32 +73,35 @@ def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_mark
     return '\n'.join(formatted_lines)
 
 
-def generate_program(language, cfg):
+def generate_program(args, cfg):
     from WASM.WASMProgram import WASMProgram
     from GLSL.GLSLProgram import GLSLProgram
     from WGSL.WGSLProgram import WGSLProgram
-    if language == Language.WASM:
-        return WASMProgram(cfg)
-    elif language == Language.WGSL:
-        return WGSLProgram(cfg)
-    elif language == Language.GLSL:
-        return GLSLProgram(cfg)
+    from languages import WASMLang, WGSLLang, GLSLLang
+    if isinstance(args.language, WASMLang):
+        return WASMProgram(cfg, args.code_type)
+    elif isinstance(args.language, WGSLLang):
+        return WGSLProgram(cfg, args.code_type)
+    elif isinstance(args.language, GLSLLang):
+        return GLSLProgram(cfg, args.code_type)
     else:
         raise ValueError("Unsupported language")
 
 
 def save_program(program, file_path, opt_level: Optional[str] = None):
     """Save program of any supported language"""
-
-    if opt_level:
-        assert program.get_language() == Language.WASM
+    from languages import WASMLang, WGSLLang, GLSLLang
 
     language = program.get_language()
-    if language == Language.WASM:
+
+    if opt_level:
+        assert isinstance(language, WASMLang)
+
+    if isinstance(language, WASMLang):
         program.save(file_path, opt_level=opt_level)
-    elif language == Language.WGSL:
+    elif isinstance(language, WGSLLang):
         program.save(file_path)
-    elif language == Language.GLSL:
+    elif isinstance(language, GLSLLang):
         from GLSL.GLSLProgram import GLSLProgram
         program.save(file_path, GLSLProgram.OutputType.COMP_SHADER)
     else:

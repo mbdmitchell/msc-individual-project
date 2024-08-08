@@ -1,4 +1,3 @@
-import os
 import re
 from runner.utils import run_subprocess
 

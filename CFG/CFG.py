@@ -351,7 +351,7 @@ class CFG:
         """
         self.graph.remove_edges_from(ebunch)
 
-    def _edge_index_to_dst_block(self, src_block: int, edge_ix: int):
+    def edge_index_to_dst_block(self, src_block: int, edge_ix: int):
 
         edges = self.graph.out_edges(nbunch=src_block)
 
@@ -364,7 +364,7 @@ class CFG:
         raise IndexError("Index out of range")
 
     def generate_valid_input_directions(self, seed: int = None, max_length: int = 64) -> list[int]:
-        # TODO: add param to return n distinct valid_input_directions as list[list[int]]
+        # TODO: Useful functionality: add param to return n distinct valid_input_directions as list[list[int]]
         if seed is None:
             seed = random.randint(0, 2 ** 32 - 1)
         random.seed(seed)
@@ -391,7 +391,7 @@ class CFG:
                     directions.append(edge_index)
                     length_remaining -= 1
 
-                dst = self._edge_index_to_dst_block(current_node, edge_index)
+                dst = self.edge_index_to_dst_block(current_node, edge_index)
                 current_node = dst
 
             # if directions results in full path, return
@@ -423,7 +423,7 @@ class CFG:
                 edge_index = input_directions[input_ix]
                 input_ix += 1
 
-            current_node = self._edge_index_to_dst_block(current_node, edge_index)
+            current_node = self.edge_index_to_dst_block(current_node, edge_index)
 
             path.append(current_node)
 
@@ -471,12 +471,13 @@ class CFG:
         return is_br
 
     def contains_merge_instruction(self, block):
-        return self.graph.nodes[block].get("Merge") != []
+        return "Merge" in self.graph.nodes[block]
 
-    def merge_block(self, block):
-        if not self.contains_merge_instruction(block):
+    def merge_block(self, header):
+        """Return """
+        if not self.contains_merge_instruction(header):
             raise ValueError("No merge block")
-        m_blk = self.graph.nodes[block]["Merge"]
+        m_blk = self.graph.nodes[header]["Merge"]
         return m_blk
 
     def is_header_block(self, block) -> bool:
@@ -487,3 +488,6 @@ class CFG:
     def contains_multi_edge(self, block) -> bool:
         return any(self.is_multi_edge(e) for e in self.graph.edges(nbunch=block))
 
+    def is_max_out_degree_lt_two(self) -> bool:
+        """Used by the WGSL code builder to determine if directions buffer is used"""
+        return all(not self.is_header_block(node) for node in self.nodes())

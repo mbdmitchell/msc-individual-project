@@ -7,3 +7,6 @@ class MergeBlockData:
     def __init__(self, merge_block, related_header):
         self.merge_block = merge_block
         self.related_header = related_header
+
+    def __repr__(self):
+        return f'(m: {self.merge_block}, h: {self.related_header})'

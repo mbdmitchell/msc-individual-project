@@ -8,7 +8,8 @@ import random
 from tqdm import tqdm
 
 from CFG.CFGGenerator import GeneratorConfig
-from common import Language, generate_program, save_program, load_config
+from languages import Language, WASMLang
+from my_common import generate_program, save_program, load_config, CodeType
 from CFG import CFGGenerator
 from my_test import tst_generated_code
 
@@ -20,14 +21,6 @@ def setup_logging(verbose: bool):
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO, format=log_format)
-
-
-def language_type(language_str):
-    try:
-        return Language[language_str.upper()]
-    except KeyError:
-        raise argparse.ArgumentTypeError(
-            f"Invalid language: {language_str}. Choose from {[l.name.lower() for l in Language]}.")
 
 
 def generate_cfg_paths(cfg, graph_no, no_of_paths):
@@ -51,7 +44,7 @@ def generate_cfg_paths(cfg, graph_no, no_of_paths):
 
     if len(paths_set) < no_of_paths:
         aborted_path = True
-        # logging.info(f"Aborted path generation for CFG {graph_no} (>1 seconds since found a distinct path)")
+        logging.info(f"Aborted path generation for CFG {graph_no} (>1 seconds since found a distinct path)")
 
     return [list(path) for path in paths_set], aborted_path
 
@@ -79,28 +72,25 @@ def generate_cfgs(args, cfg_filepath: str):
 
 
 def generate_direction_paths(args, cfg_filepath, directions_filepath):
+    aborted_paths = []
 
-        aborted_paths = []
+    for i in tqdm(range(args.no_of_graphs), desc="Generating directions"):
+        cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
+        paths, aborted_path = generate_cfg_paths(cfg, graph_no=i, no_of_paths=args.no_of_paths)
 
-        for i in tqdm(range(args.no_of_graphs), desc="Generating directions"):
-            cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
-            paths, aborted_path = generate_cfg_paths(cfg, graph_no=i, no_of_paths=args.no_of_paths)
+        if aborted_path:
+            aborted_paths.append(i)
 
-            if aborted_path:
-                aborted_paths.append(i)
+        pickle.dump(paths, open(f'{directions_filepath}/directions_{i}.pickle', "wb"))
 
-            pickle.dump(paths, open(f'{directions_filepath}/directions_{i}.pickle', "wb"))
-
-        if len(aborted_paths) > 0:
-            logging.debug(f"Aborted path generation for CFGs {aborted_paths} (>1 seconds since found a distinct path)")
-
-# TODO: Refactor: In a large testing campaign, you wouldn't want to necessarily generate 1,000,000+ CFGs, THEN all paths
-#   , THEN test. Refactor so (1) parallelisable (2) tidies as you go so dont need folder w/ a bajillion files
+    if len(aborted_paths) > 0:
+        logging.debug(f"Aborted path generation for CFGs {aborted_paths} (>1 seconds since found a distinct path)")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("language", type=language_type, help="The language to use (e.g., wasm, wgsl, glsl)")
+    parser.add_argument("language", type=Language.from_str,
+                        help="The language to use (e.g., wasmlang, wgsllang, glsllang)")
     parser.add_argument("no_of_graphs", type=int)
     parser.add_argument("no_of_paths", type=int)
     parser.add_argument("cfg_source",
@@ -111,8 +101,13 @@ def main():
                             "- 'random': Generates a truly random configuration.\n"
                             "- 'swarm': Uses a random subset of possible features; used for swarm testing."
                         ))
-    # parser.add_argument("static_code_level", type=int)  # 0 = global memory, 1 = static
+    parser.add_argument("code_type", type=CodeType.from_str, help=(
+        "The type of code you want to generate for the tests:\n"
+        "- 'global_array': The control flow path is dictated by a global 'directions' array at the start of the program.\n"
+        "- 'static': The path is built-in to the program, e.g. for(i=0;i<3;i++)"
+    ))
 
+    # Optional args
     parser.add_argument("--opt_level", type=str, choices=["O", "O1", "O2", "O3", "O4", "Os", "Oz"], default=None,
                         help="Optimization level for WASM")
     parser.add_argument("--seed", type=int, help="Seed for randomness", default=None)
@@ -122,21 +117,28 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Print results for every test")
 
     args = parser.parse_args()
+
+    # Confirm valid args
+    if args.min_depth > args.max_depth:
+        parser.error("min depth > max depth")
+    if args.opt_level and isinstance(args.language, WASMLang):
+        parser.error("The --opt_level argument can only be used when the language is 'wasm'")
+
+    # Final arg assignment
     if args.output_folder is None:
         args.output_folder = f'./{datetime.now().strftime("%Y-%m-%d, %H:%M:%S")}, ' \
-                             f'{args.language.name} ' \
+                             f'{args.language} ' \
                              f'{("-" + args.opt_level) if args.opt_level else ""} ' \
                              '- TEST'
 
-    if args.min_depth > args.max_depth:
-        parser.error("min depth > max depth")
-
-    config = load_config()
+    # Temp
+    if args.code_type == CodeType.STATIC:
+        raise NotImplementedError
 
     if args.seed is not None:
         random.seed(args.seed)
-    if args.opt_level and args.language != Language.WASM:
-        parser.error("The --opt_level argument can only be used when the language is 'wasm'")
+
+    config = load_config()
 
     setup_logging(args.verbose)
 
@@ -165,12 +167,20 @@ def main():
     generate_direction_paths(args, cfg_filepath, directions_filepath)
 
     for i in tqdm(range(args.no_of_graphs), desc="Fleshing CFGs"):
+
         cfg = pickle.load(open(f'{cfg_filepath}/graph_{i}.pickle', 'rb'))
 
-        program = generate_program(args.language, cfg)
-        save_program(program, f'{code_filepath}/code_{i}', opt_level=args.opt_level)
+        if args.code_type == CodeType.GLOBAL_ARRAY:
 
-        pickle.dump(program, open(f'{program_filepath}/program_class_{i}.pickle', "wb"))
+            program = generate_program(args, cfg)
+            save_program(program, f'{code_filepath}/code_{i}', opt_level=args.opt_level)
+            pickle.dump(program, open(f'{program_filepath}/program_class_{i}.pickle', "wb"))
+
+        elif args.code_type == CodeType.STATIC:
+            raise NotImplementedError
+
+        else:
+            raise ValueError("Invalid code type")
 
     for g in tqdm(range(args.no_of_graphs), desc="Running tests"):
 
@@ -205,7 +215,7 @@ def main():
             os.remove(f'{cfg_filepath}/graph_{g}.pickle')
             os.remove(f'{directions_filepath}/directions_{g}.pickle')
             os.remove(f'{program_filepath}/program_class_{g}.pickle')
-            os.remove(f'{code_filepath}/code_{g}.{args.langauge.extension()}')
+            os.remove(f'{code_filepath}/code_{g}.{args.language.extension()}')
 
         if len(bug_report_memos) > 0:
             logging.info(bug_report_memos)

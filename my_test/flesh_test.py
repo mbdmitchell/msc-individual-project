@@ -11,7 +11,9 @@ import WGSL
 from CFG import CFGGenerator
 from CFG.CFGGenerator import GeneratorConfig
 from .cfg_utilities import all_cfg_and_language_combos
-from common import Language, generate_program, save_program
+from my_common import generate_program, save_program
+from languages import Language, WASMLang, WGSLLang, GLSLLang
+
 
 def tst_generated_code(program,
                        input_directions: list[int],
@@ -26,18 +28,20 @@ def tst_generated_code(program,
     try:
 
         # VALIDATE
-        if language == Language.WASM:
+        if isinstance(language, WASMLang):
             is_command_successful, msg = WASM.validate_wasm(code_filepath)
             if not is_command_successful:
                 return is_command_successful, msg
 
         # RUN
-        if language == Language.WASM:
+        if isinstance(language, WASMLang):
             is_match, msg = WASM.run_wasm(program, input_directions, output_filepath)
-        elif language == Language.WGSL:
+        elif isinstance(language, WGSLLang):
             is_match, msg = WGSL.run_wgsl(program, input_directions, output_filepath)
-        elif language == Language.GLSL:
+        elif isinstance(language, GLSLLang):
             is_match, msg = GLSL.run_glsl(program, input_directions, config)
+        else:
+            raise ValueError("Language not handled")
 
         return is_match, msg
 
@@ -73,7 +77,7 @@ def test_cfg(cfg, language):
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        if Language.is_shader_language(language):
+        if language.is_shader_language:
             program_name = 'shader'
         else:
             program_name = 'program'
