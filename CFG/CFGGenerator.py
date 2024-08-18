@@ -9,7 +9,7 @@ from datetime import timedelta, datetime
 from CFG import CFG
 import networkx as nx
 
-from common import Language
+from languages import Language
 
 
 class BlockData:
@@ -129,25 +129,40 @@ class GeneratorConfig:
         self.allow_continue = continue_
 
     @staticmethod
-    def allow_all(languge: Language) -> 'GeneratorConfig':
+    def allow_all(language: Language) -> 'GeneratorConfig':
         """Allow all options for a given language"""
         return GeneratorConfig(basic=True,
                                loop=True,
                                selection=True,
-                               switch_fallthrough=Language.allows_switch_fallthrough(languge),
+                               switch_fallthrough=language.allows_switch_fallthrough,
                                switch_default=True,
                                break_=True,
                                continue_=True)
 
     @staticmethod
-    def random(languge: Language) -> 'GeneratorConfig':
-        return GeneratorConfig(random.choice([True, False]),
-                               random.choice([True, False]),
-                               random.choice([True, False]),
-                               random.choice([Language.allows_switch_fallthrough(languge), False]),
-                               random.choice([True, False]),
-                               random.choice([True, False]),
-                               random.choice([True, False]))
+    def random(language: Language) -> 'GeneratorConfig':
+        """Return random GeneratorConfig. Choose one attr to definitely set to True so cfg can always be created)"""
+
+        flags = [False] * 4
+
+        chosen_index = random.choice(range(4))
+        flags[chosen_index] = True
+
+        flags = [flag or random.choice([True, False]) for flag in flags]
+
+        return GeneratorConfig(
+            basic=flags[0],
+            loop=flags[1],
+            selection=flags[2],
+            switch_fallthrough=random.choice([language.allows_switch_fallthrough, False]),
+            switch_default=flags[3],
+            break_=random.choice([True, False]),
+            continue_=random.choice([True, False])
+        )
+
+    def no_constructs_allowed(self) -> bool:
+        return not any([self.allow_basic, self.allow_loop, self.allow_selection, self.allow_switch_fallthrough,
+                        self.allow_switch_default])
 
 
 class CFGGenerator:
@@ -489,8 +504,6 @@ class CFGGenerator:
                                      min_depth: int,
                                      max_depth: int):
 
-        rand = random.Random()
-
         generated_hashes = set()
         TIME_LIMIT = timedelta(seconds=5)  # if it can't generate a new CFG in TIME_LIMIT, early return.
 
@@ -501,7 +514,7 @@ class CFGGenerator:
             found_new_cfg = False
             while datetime.now() - start_time < TIME_LIMIT:
 
-                depth = rand.randint(min_depth, max_depth)
+                depth = random.randint(min_depth, max_depth)
                 cfg = self.generate(depth, min_successors=3, max_successors=5)
                 cfg_hash = hash(cfg)
 
@@ -523,8 +536,6 @@ class CFGGenerator:
                                    min_depth,
                                    max_depth):
 
-        rand = random.Random()
-
         generated_hashes = set()
         TIME_LIMIT = timedelta(seconds=5)  # if it can't generate a new CFG in TIME_LIMIT, early return.
 
@@ -537,7 +548,7 @@ class CFGGenerator:
 
                 cfg_generator = CFGGenerator(GeneratorConfig.random(language))
 
-                depth = rand.randint(min_depth, max_depth)
+                depth = random.randint(min_depth, max_depth)
                 cfg = cfg_generator.generate(depth, min_successors=3, max_successors=5)
                 cfg_hash = hash(cfg)
 
