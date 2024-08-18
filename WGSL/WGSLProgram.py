@@ -1,16 +1,20 @@
 import os
+from typing import Optional
 
-from common.Language import Language
-from common.Program import Program
+from code_builders import CodeBuilderFactory
+from my_common.CodeType import CodeType
+from languages import WGSLLang
+from my_common.Program import Program
 import CFG
-from WGSL import WGSLCodeBuilder
+
 
 class WGSLProgram(Program):
-    def __init__(self, cfg: CFG):
+    def __init__(self, cfg: CFG, code_type: CodeType, directions: Optional[list[int]] = None):
         super().__init__(cfg)
-        self.builder = WGSLCodeBuilder.WGSLCodeBuilder(cfg)
+        self.code_type = code_type
+        self.builder = CodeBuilderFactory.create_builder(WGSLLang(), self.cfg, self.code_type, directions)
         self._code = self.builder.build_code()
-        self.language = Language.WGSL
+        self.language = WGSLLang()
 
     def save(self, file_path, verbose=False):
         directory = os.path.dirname(file_path)

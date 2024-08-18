@@ -5,18 +5,20 @@ import shutil
 import subprocess
 from typing import Optional
 
-from common.Language import Language
-from common.Program import Program
+from code_builders import CodeBuilderFactory
+from languages import WASMLang
+from my_common.CodeType import CodeType
+from my_common.Program import Program
 import CFG
-from WASM import WASMCodeBuilder
 
 
 class WASMProgram(Program):
-    def __init__(self, cfg: CFG):
+    def __init__(self, cfg: CFG, code_type: CodeType, directions: Optional[list[int]] = None):
         super().__init__(cfg)
-        self.builder = WASMCodeBuilder.WASMCodeBuilder(cfg)
+        self.code_type = code_type
+        self.builder = CodeBuilderFactory.create_builder(WASMLang(), self.cfg, self.code_type, directions)
         self._wat_code = self.builder.build_code()
-        self.language = Language.WASM
+        self.language = WASMLang()
 
     @staticmethod
     def compile(source_code_path, target_binary_path):
