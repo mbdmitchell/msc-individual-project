@@ -2,7 +2,6 @@ import re
 import subprocess
 import tempfile
 
-from runner.utils import run_subprocess
 
 def wgsl_output_file_to_list(output_filepath) -> list[int]:
     output_txt = ''

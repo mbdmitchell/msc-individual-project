@@ -1,6 +1,6 @@
 import subprocess
 import tempfile
-from GLSL import GLSLProgram
+from programs.GLSLProgram import GLSLProgram
 
 
 def run_glsl(program: GLSLProgram, input_directions: list[int], config) -> (bool, str):

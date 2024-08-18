@@ -4,7 +4,7 @@ from typing import Optional
 from code_builders import CodeBuilderFactory
 from my_common.CodeType import CodeType
 from languages import WGSLLang
-from my_common.Program import Program
+from programs.Program import Program
 import CFG
 
 

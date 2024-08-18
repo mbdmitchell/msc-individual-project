@@ -8,7 +8,7 @@ from typing import Optional
 from code_builders import CodeBuilderFactory
 from languages import WASMLang
 from my_common.CodeType import CodeType
-from my_common.Program import Program
+from programs.Program import Program
 import CFG
 
 

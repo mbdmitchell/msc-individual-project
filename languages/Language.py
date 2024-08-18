@@ -13,8 +13,6 @@ class Language(ABC, metaclass=LanguageMeta):
     def __str__(self):
         pass
 
-    # CLASS METHODS
-
     @classmethod
     def all_languages(cls):
         """Return all language subclasses."""
@@ -32,9 +30,7 @@ class Language(ABC, metaclass=LanguageMeta):
             f"Invalid language: {language_str}. Choose from: {valid_languages}."
         )
 
-    # PROPERTIES
-
-    # language ...
+    # LANGUAGE PROPERTIES
 
     @property
     @abstractmethod
@@ -50,21 +46,24 @@ class Language(ABC, metaclass=LanguageMeta):
     def extension(self, human_readable: bool = False) -> str:
         pass
 
-    # code ...
+    # OPERATIONS
 
     @staticmethod
     @abstractmethod
     def add(*args: str):
+        """NB: str so can also add, e.g. `arr[ix]`"""
         pass
 
     @staticmethod
     @abstractmethod
     def multiply(*args: str):
+        """NB: str so can also add, e.g. `arr[ix]`"""
         pass
 
     @property
     @abstractmethod
     def block(self):
+        """How a CFG block is represented"""
         pass
 
     @staticmethod

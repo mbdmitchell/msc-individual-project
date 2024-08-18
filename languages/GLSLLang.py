@@ -6,6 +6,9 @@ from languages.Language import Language
 
 class GLSLLang(Language):
 
+    def __str__(self):
+        return 'glsl'
+
     @staticmethod
     def add(*args: str):
         return ' + '.join(args)
@@ -14,16 +17,15 @@ class GLSLLang(Language):
     def multiply(*args: str):
         return ' * '.join(args)
 
-    def __str__(self):
-        return 'glsl'
-
     @staticmethod
     def assign_to_var(var_name: str, value_or_placeholder: int | str):
         return f'{var_name} = {value_or_placeholder};'
 
-    # PROPERTIES
+    @staticmethod
+    def array_declaration_pre_format():
+        return 'const int {var_name}[] = int[]({values_str});'
 
-    # language ...
+    # LANGUAGE PROPERTIES
 
     @property
     def is_shader_language(self) -> bool:
@@ -36,7 +38,7 @@ class GLSLLang(Language):
     def extension(self, human_readable: bool = False) -> str:
         return 'glsl'
 
-    # code ...
+    # CODE
 
     @property
     def block(self):
@@ -49,7 +51,7 @@ class GLSLLang(Language):
 
     @staticmethod
     def set_and_increment_control():
-        """For CodeType.STATIC."""
+        """For array-based CodeType."""
         return f"""
             cntrl_ix++;
             {Language.cntrl_val_var_name()} = inputData[cntrl_ix];
@@ -66,9 +68,6 @@ class GLSLLang(Language):
     @property
     def exit_code(self) -> str:
         return 'return;\n'
-
-    def array_declaration_pre_format(self):
-        return 'const int {var_name}[] = int[]({values_str});'
 
     @staticmethod
     def directions_layout_binding():
@@ -105,7 +104,7 @@ class GLSLLang(Language):
         elif code_type.is_array_type():
             return f"""
                 {program_start}
-                {GLSLLang.directions_layout_binding()}
+                {code_type.if_global(GLSLLang.directions_layout_binding())}
                 void main() {{
                     int cntrl_ix = -1; // always incremented before use
                     int output_ix = 0;
@@ -191,7 +190,7 @@ class GLSLLang(Language):
                         }}}}
                         """
 
-        elif code_type == CodeType.GLOBAL_ARRAY:
+        elif code_type.is_array_type():
             return f"""
                         while (true) {{{{
                             {{loop_header}}

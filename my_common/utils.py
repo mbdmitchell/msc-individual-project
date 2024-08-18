@@ -72,9 +72,9 @@ def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_mark
 
 def generate_program(args, cfg, directions: list[int] = None):
 
-    from WASM.WASMProgram import WASMProgram
-    from GLSL.GLSLProgram import GLSLProgram
-    from WGSL.WGSLProgram import WGSLProgram
+    from programs.WASMProgram import WASMProgram
+    from programs.GLSLProgram import GLSLProgram
+    from programs.WGSLProgram import WGSLProgram
     from languages import WASMLang, WGSLLang, GLSLLang
 
     if isinstance(args.language, WASMLang):
@@ -101,7 +101,7 @@ def save_program(program, file_path, opt_level: Optional[str] = None):
     elif isinstance(language, WGSLLang):
         program.save(file_path)
     elif isinstance(language, GLSLLang):
-        from GLSL.GLSLProgram import GLSLProgram
+        from programs.GLSLProgram import GLSLProgram
         program.save(file_path, GLSLProgram.OutputType.COMP_SHADER)
     else:
         raise ValueError("Unsupported language")

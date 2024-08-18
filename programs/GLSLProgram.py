@@ -9,9 +9,10 @@ import CFG
 from enum import Enum
 
 from languages import GLSLLang
-from my_common import Program
+from programs.Program import Program
 from my_common.CodeType import CodeType
 from code_builders import CodeBuilderFactory
+
 
 def _list_to_space_separated_values(values: Optional[list[int]]) -> str:
 

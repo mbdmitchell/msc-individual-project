@@ -6,6 +6,9 @@ from languages.Language import Language
 
 class WGSLLang(Language):
 
+    def __str__(self):
+        return 'wgsl'
+
     @staticmethod
     def add(*args: str):
         return ' + '.join(args)
@@ -22,12 +25,7 @@ class WGSLLang(Language):
     def array_declaration_pre_format():
         return 'const {var_name} = array<i32, {size}>({values_str});'
 
-    def __str__(self):
-        return 'wgsl'
-
-    # PROPERTIES
-
-    # language ...
+    # LANGUAGE PROPERTIES
 
     @property
     def is_shader_language(self) -> bool:
@@ -40,7 +38,7 @@ class WGSLLang(Language):
     def extension(self, human_readable: bool = False) -> str:
         return 'wgsl'
 
-    # code ...
+    # CODE
 
     @property
     def block(self):
@@ -85,6 +83,7 @@ class WGSLLang(Language):
 
         is_directions_buffer_used = is_max_out_degree_lt_two
 
+        # Only needed for WGSL
         if code_type == CodeType.GLOBAL_ARRAY:
             prevent_discarding_unused_bindings = "var use_input_data = input_data[0];\n" if is_directions_buffer_used else ''
         elif code_type == CodeType.HEADER_GUARD:  # TODO: rm CodeType.HEADER_GUARD as shouldn't be needed

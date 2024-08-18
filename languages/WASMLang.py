@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from my_common.CodeType import CodeType
-from languages import Language
+from languages.Language import Language
 
 
 class WASMLang(Language):

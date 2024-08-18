@@ -10,6 +10,7 @@ print_lock = Lock()
 processed_cfgs_lock = Lock()
 processed_cfgs: dict[int, bool] = {}
 
+
 def execute_concurrently(tasks, task_args_list):
     """
     Parameters:
