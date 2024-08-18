@@ -1,5 +1,6 @@
 import concurrent.futures
 import logging
+import os
 import subprocess
 import time
 
@@ -34,7 +35,13 @@ def execute_concurrently(tasks, task_args_list):
 
 def run_subprocess(command, output_path=None, redirect_output=False, verbose=False):
     """Run a subprocess command and handle errors."""
+
     try:
+        if output_path:
+            output_dir = os.path.dirname(output_path)
+            if output_dir and not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
         if redirect_output and output_path:
             with open(output_path, 'w') as output_file:
                 result = subprocess.run(command, stdout=output_file, stderr=subprocess.PIPE, check=True, text=True)
