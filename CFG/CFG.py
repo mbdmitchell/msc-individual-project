@@ -254,7 +254,7 @@ class CFG:
         NB: Safe to ignore "'int' object is not callable" warning
         """
         if not self.contains_multi_edge(block):
-            return self.graph.out_degree(block)
+            return self.graph.out_degree(block)  # pylint: disable=not-callable
         return sum(
             self.no_of_edges_represented_by_edge(e)
             for e in self.graph.out_edges(nbunch=block)
@@ -266,7 +266,7 @@ class CFG:
         NB: Safe to ignore "'int' object is not callable" warning
         """
         if not self.contains_multi_edge(block):
-            return self.graph.in_degree(block)
+            return self.graph.in_degree(block)  # pylint: disable=not-callable
         return sum(
             self.no_of_edges_represented_by_edge(e)
             for e in self.graph.in_edges(nbunch=block)
