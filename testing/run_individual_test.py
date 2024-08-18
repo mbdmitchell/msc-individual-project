@@ -24,7 +24,7 @@ def main(program_class_path, directions_str):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python run_individual_test.py path/to/program_class path/to/directions.txt")
+        print("Usage: python run_individual_test.py path/to/program_class directions_str")
         sys.exit(1)
 
     program_class_filepath = sys.argv[1]
