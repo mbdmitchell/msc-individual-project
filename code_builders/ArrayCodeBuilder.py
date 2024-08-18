@@ -6,6 +6,7 @@ from languages import Language
 
 
 class ArrayCodeBuilder(CodeBuilder):
+    """Parent of GlobalArrayCodeBuilder and LocalArrayCodeBuilder"""
     def __init__(self, language: 'Language', cfg: CFG, directions: list[int] = None):
         super().__init__(language, cfg, directions)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC
 from CFG import *
-from common import Language
+from languages import Language
 
 
 class Program(ABC):

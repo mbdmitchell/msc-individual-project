@@ -4,7 +4,7 @@ import subprocess
 
 from WGSL.utils import wgsl_output_file_to_list
 from my_common import load_repo_paths_config
-from my_test import tst_generated_code
+# from my_test import tst_generated_code  # TODO: refactor using tst_generated_code
 
 tests_passed = []
 tests_failed = []

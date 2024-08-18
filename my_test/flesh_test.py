@@ -28,7 +28,7 @@ def tst_generated_code(program,
     output_filepath = os.path.join(code_directory, 'output.txt')
     output_filepath = os.path.abspath(output_filepath)
 
-    # TEMP: FIX for evaluation
+    # TEMP: FIX for evaluation. # TODO: find underlying cause
     output_filepath = output_filepath.replace('/evaluation/evaluation/', '/evaluation/')
 
     try:
@@ -93,7 +93,7 @@ def test_cfg(cfg, language, config):
         save_program(program, os.path.join(temp_dir, program_name))
 
         for direction in input_directions:
-            test_direction(program, direction, config)
+            test_direction(program, direction)
 
 @pytest.fixture(scope="session")
 def tested_configs():

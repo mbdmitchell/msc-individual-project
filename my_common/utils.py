@@ -5,6 +5,7 @@ import logging
 import os
 from typing import Optional
 
+
 def load_repo_paths_config():
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +59,6 @@ def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_mark
 
         if any(stripped_line.startswith(prefix) for prefix in add_line_above):
             indented_line = '\n' + indented_line
-
 
         formatted_lines.append(indented_line)
 

@@ -141,7 +141,7 @@ class GeneratorConfig:
 
     @staticmethod
     def random(language: Language) -> 'GeneratorConfig':
-        """Return random GeneratorConfig. Choose one attr to definitely set to True so cfg can always be created)"""
+        """Return random GeneratorConfig. Choose one attr to definitely set to True so cfg can always be created"""
 
         flags = [False] * 4
 
@@ -505,14 +505,14 @@ class CFGGenerator:
                                      max_depth: int):
 
         generated_hashes = set()
-        TIME_LIMIT = timedelta(seconds=5)  # if it can't generate a new CFG in TIME_LIMIT, early return.
+        time_limit = timedelta(seconds=5)  # if it can't generate a new CFG in time_limit, early return.
 
         for i in range(no_of_graphs):
 
             start_time = datetime.now()
 
             found_new_cfg = False
-            while datetime.now() - start_time < TIME_LIMIT:
+            while datetime.now() - start_time < time_limit:
 
                 depth = random.randint(min_depth, max_depth)
                 cfg = self.generate(depth, min_successors=3, max_successors=5)
@@ -526,7 +526,7 @@ class CFGGenerator:
                     break
 
             if not found_new_cfg:
-                logging.info(f"Aborted graph generation (>{TIME_LIMIT} elapsed)")
+                logging.info(f"Aborted graph generation (>{time_limit} elapsed)")
                 return
 
     @staticmethod
@@ -537,14 +537,14 @@ class CFGGenerator:
                                    max_depth):
 
         generated_hashes = set()
-        TIME_LIMIT = timedelta(seconds=5)  # if it can't generate a new CFG in TIME_LIMIT, early return.
+        time_limit = timedelta(seconds=5)  # if it can't generate a new CFG in time_limit, early return.
 
         for i in range(no_of_graphs):
 
             start_time = datetime.now()
             found_new_cfg = False
 
-            while datetime.now() - start_time < TIME_LIMIT:
+            while datetime.now() - start_time < time_limit:
 
                 cfg_generator = CFGGenerator(GeneratorConfig.random(language))
 
@@ -560,5 +560,5 @@ class CFGGenerator:
                     break
 
             if not found_new_cfg:
-                logging.info(f"Aborted graph generation (>{TIME_LIMIT} elapsed)")
+                logging.info(f"Aborted graph generation (>{time_limit} elapsed)")
                 return

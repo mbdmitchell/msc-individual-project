@@ -1,5 +1,4 @@
 import re
-
 from CFG import CFG
 from my_common import MergeBlockData
 from my_common.CodeType import CodeType

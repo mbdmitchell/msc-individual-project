@@ -1,7 +1,6 @@
 from CFG.example_CFGs import *
 from itertools import product
-
-from common import Language
+from languages import Language
 
 
 def example_cfgs_with_fallthrough():
@@ -33,7 +32,7 @@ def all_example_cfgs():
 
 
 def all_viable_cfgs(language: Language):
-    if Language.allows_switch_fallthrough(language):
+    if language.allows_switch_fallthrough:
         return all_example_cfgs()
     else:
         return example_cfgs_without_fallthrough()

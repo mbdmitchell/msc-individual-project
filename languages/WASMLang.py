@@ -189,7 +189,6 @@ class WASMLang(Language):
     def switch_break_label(switch_label_num: int) -> str:
         return f"(br {WASMLang.switch_label(switch_label_num)})"
 
-
     @staticmethod
     def switch_case_str_pre_format() -> str:
         return """

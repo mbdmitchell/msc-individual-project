@@ -2,6 +2,7 @@ import subprocess
 import tempfile
 from GLSL import GLSLProgram
 
+
 def run_glsl(program: GLSLProgram, input_directions: list[int], config) -> (bool, str):
 
     expected_path: list[int] = program.cfg.expected_output_path(input_directions)

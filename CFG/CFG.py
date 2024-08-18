@@ -351,7 +351,7 @@ class CFG:
         """
         self.graph.remove_edges_from(ebunch)
 
-    def _edge_index_to_dst_block(self, src_block: int, edge_ix: int):
+    def edge_index_to_dst_block(self, src_block: int, edge_ix: int):
 
         edges = self.graph.out_edges(nbunch=src_block)
 
@@ -391,7 +391,7 @@ class CFG:
                     directions.append(edge_index)
                     length_remaining -= 1
 
-                dst = self._edge_index_to_dst_block(current_node, edge_index)
+                dst = self.edge_index_to_dst_block(current_node, edge_index)
                 current_node = dst
 
             # if directions results in full path, return
@@ -423,7 +423,7 @@ class CFG:
                 edge_index = input_directions[input_ix]
                 input_ix += 1
 
-            current_node = self._edge_index_to_dst_block(current_node, edge_index)
+            current_node = self.edge_index_to_dst_block(current_node, edge_index)
 
             path.append(current_node)
 

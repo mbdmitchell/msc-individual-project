@@ -13,7 +13,6 @@ from my_common import Program
 from my_common.CodeType import CodeType
 from code_builders import CodeBuilderFactory
 
-
 def _list_to_space_separated_values(values: Optional[list[int]]) -> str:
 
     if not values:
@@ -39,7 +38,7 @@ def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_direc
     buffer_full_of_zeros = _list_to_space_separated_values([0] * path_buffer_size)
 
     expected_path_padded_with_zeros = _list_to_space_separated_values(
-        expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path))
+        expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path))  # TODO: Figure how remove incorrect warning
     )
 
     return f"""GL 4.5
