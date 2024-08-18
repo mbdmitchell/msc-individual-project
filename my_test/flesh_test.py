@@ -11,33 +11,43 @@ import WGSL
 from CFG import CFGGenerator
 from CFG.CFGGenerator import GeneratorConfig
 from .cfg_utilities import all_cfg_and_language_combos
-from common import Language, generate_program, save_program
+from my_common import generate_program, save_program, load_repo_paths_config
+from languages import Language, WASMLang, WGSLLang, GLSLLang
+
 
 def tst_generated_code(program,
                        input_directions: list[int],
                        config,
-                       clear_files_after=True):
+                       clear_files_after=True,
+                       args=None):
 
     language = program.get_language()
     code_filepath = program.get_file_path()
 
-    output_filepath = f'{code_filepath.rsplit("/", 1)[0]}/output.txt'
+    code_directory = os.path.dirname(code_filepath)
+    output_filepath = os.path.join(code_directory, 'output.txt')
+    output_filepath = os.path.abspath(output_filepath)
+
+    # TEMP: FIX for evaluation
+    output_filepath = output_filepath.replace('/evaluation/evaluation/', '/evaluation/')
 
     try:
 
         # VALIDATE
-        if language == Language.WASM:
+        if isinstance(language, WASMLang):
             is_command_successful, msg = WASM.validate_wasm(code_filepath)
             if not is_command_successful:
                 return is_command_successful, msg
 
         # RUN
-        if language == Language.WASM:
+        if isinstance(language, WASMLang):
             is_match, msg = WASM.run_wasm(program, input_directions, output_filepath)
-        elif language == Language.WGSL:
+        elif isinstance(language, WGSLLang):
             is_match, msg = WGSL.run_wgsl(program, input_directions, output_filepath)
-        elif language == Language.GLSL:
+        elif isinstance(language, GLSLLang):
             is_match, msg = GLSL.run_glsl(program, input_directions, config)
+        else:
+            raise ValueError("Language not handled")
 
         return is_match, msg
 
@@ -50,12 +60,13 @@ def tst_generated_code(program,
 def test_direction(program, direction):
     match, msg = tst_generated_code(program,
                                     direction,
+                                    load_repo_paths_config(),
                                     clear_files_after=True)
     assert match, msg
 
 
 @pytest.mark.parametrize("cfg, language", all_cfg_and_language_combos())
-def test_cfg(cfg, language):
+def test_cfg(cfg, language, config):
 
     # GENERATE INPUT DIRECTIONS
 
@@ -73,7 +84,7 @@ def test_cfg(cfg, language):
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        if Language.is_shader_language(language):
+        if language.is_shader_language:
             program_name = 'shader'
         else:
             program_name = 'program'
@@ -82,7 +93,7 @@ def test_cfg(cfg, language):
         save_program(program, os.path.join(temp_dir, program_name))
 
         for direction in input_directions:
-            test_direction(program, direction)
+            test_direction(program, direction, config)
 
 @pytest.fixture(scope="session")
 def tested_configs():
@@ -90,7 +101,7 @@ def tested_configs():
 
 
 @pytest.mark.parametrize("seed,language", list(product(range(10), Language.all_languages())))
-def test_generated_cfgs(seed, language, tested_configs):
+def test_generated_cfgs(seed, language, tested_configs, config):
     if (seed, language) in tested_configs:
         pytest.skip(f"Seed {seed} for language {language} already tested")
 
@@ -98,7 +109,7 @@ def test_generated_cfgs(seed, language, tested_configs):
 
     cfg = CFGGenerator(generator_config=GeneratorConfig.allow_all(language)).generate(4, 3, 5)
 
-    test_cfg(cfg, language)
+    test_cfg(cfg, language, config)
     tested_configs.add((seed, language))
 
 
