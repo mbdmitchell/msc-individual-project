@@ -12,13 +12,13 @@ config = load_repo_paths_config()
 
 evaluation_root = '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation'
 
-program_files = [os.path.join(evaluation_root, 'wgsl_test_programs/program_class', file)
-                 for file in os.listdir(os.path.join(evaluation_root, 'wgsl_test_programs/program_class'))]
+program_files = [os.path.join(evaluation_root, 'wgsl_test_programs/wgsl-swarm-global_array/program_class', file)
+                 for file in os.listdir(os.path.join(evaluation_root, 'wgsl_test_programs/wgsl-swarm-global_array/program_class'))]
 
 program_files.sort()
 
-directions_files = [os.path.join(evaluation_root, 'wgsl_test_programs/directions', file)
-                    for file in os.listdir(os.path.join(evaluation_root, 'wgsl_test_programs/directions'))]
+directions_files = [os.path.join(evaluation_root, 'wgsl_test_programs/wgsl-swarm-global_array/directions', file)
+                    for file in os.listdir(os.path.join(evaluation_root, 'wgsl_test_programs/wgsl-swarm-global_array/directions'))]
 
 directions_files.sort()
 
@@ -40,14 +40,10 @@ for program_ix, program_path in enumerate(program_files):
 
     for direction_ix, input_directions in enumerate(directions[program_ix]):
 
-        code_directory = os.path.dirname(program.get_file_path())
-        output_filepath = os.path.abspath(os.path.join(code_directory, 'output.txt'))
+        code_directory = '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_test_programs/wgsl-swarm-global_array/code'
 
-        program_path = os.path.abspath(program.get_file_path())
-
-        # TEMP FIX for evaluation
-        output_filepath = output_filepath.replace('/evaluation/evaluation/', '/evaluation/')
-        program_path = program_path.replace('/evaluation/evaluation/', '/evaluation/')
+        filename = os.path.basename(program.get_file_path())
+        program_path = os.path.join('/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_test_programs/wgsl-swarm-global_array/code/', filename)
 
         input_directions.append(0)
 
@@ -59,6 +55,10 @@ for program_ix, program_path in enumerate(program_files):
         ]
 
         timeout_duration = 5  # seconds
+
+        output_filepath = os.path.abspath(os.path.join(code_directory, 'output.txt'))
+        output_filepath = output_filepath.replace('/evaluation/evaluation/', '/evaluation/')  # TEMP fix
+        os.makedirs(os.path.dirname(output_filepath), exist_ok=True)  # Ensure the directory exists
 
         try:
             with open(output_filepath, 'w') as output_file:
