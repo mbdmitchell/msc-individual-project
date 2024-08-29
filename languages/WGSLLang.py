@@ -93,8 +93,8 @@ class WGSLLang(Language):
 
         if code_type == CodeType.HEADER_GUARD:
             return f"""
-        @group(0) @binding(0) var<storage, read_write> input_data: array<i32>;
-        @group(0) @binding(1) var<storage, read_write> output_data: array<i32>;
+        @group(0) @binding(0) var<storage, read_write> output_data: array<i32>;
+        @group(0) @binding(1) var<storage, read_write> input_data: array<i32>;
 
         @compute @workgroup_size(1) 
         fn control_flow( @builtin(global_invocation_id) id: vec3u ) {{
@@ -106,8 +106,8 @@ class WGSLLang(Language):
         """
         elif code_type.is_array_type():
             return f"""
-        {code_type.if_global('@ group(0) @ binding(0) var < storage, read_write > input_data: array<i32>;')}
-        @group(0) @binding(1) var<storage, read_write> output_data: array<i32>;
+        @group(0) @binding(0) var<storage, read_write> output_data: array<i32>;
+        {code_type.if_global('@group(0) @binding(1) var < storage, read_write > input_data: array<i32>;')}
 
         @compute @workgroup_size(1) 
         fn control_flow( @builtin(global_invocation_id) id: vec3u ) {{
