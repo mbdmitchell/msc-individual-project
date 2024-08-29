@@ -209,6 +209,16 @@ class CFG:
 
         self.graph.nodes[node][attr_label] = value
 
+    def remove_node_attribute(self, node, attr_label: str):
+
+        if node not in self.graph.nodes:
+            raise RuntimeError(f"Node {node} does not exist in the graph")
+
+        if attr_label not in self.graph.nodes[node]:
+            raise RuntimeError(f"Attribute {attr_label} does not exist in node {node}")
+
+        del self.graph.nodes[node][attr_label]
+
     def _add_edge_attribute(self, edge, attr_label: str, value: bool | int):
         # TODO: if attr not in {, , , , , ,} throw
         if edge not in self.graph.edges:
@@ -340,16 +350,19 @@ class CFG:
         self.graph.remove_edge(u, v, key)
 
     def remove_edges_from(self, ebunch: list):
-        """Wrapper func
+        """Wrapper function
         ebunch: list or container of edge tuples
             Each edge given in the list or container will be removed
             from the graph. The edges can be:
-
                 - 2-tuples (u, v) A single edge between u and v is removed.
                 - 3-tuples (u, v, key) The edge identified by key is removed.
                 - 4-tuples (u, v, key, data) where data is ignored.
         """
         self.graph.remove_edges_from(ebunch)
+
+    def remove_nodes_from(self, nodes):
+        """Wrapper function c.f. NetworkX's remove_nodes_from for details"""
+        self.graph.remove_nodes_from(nodes)
 
     def edge_index_to_dst_block(self, src_block: int, edge_ix: int):
 
@@ -486,4 +499,3 @@ class CFG:
 
     def contains_multi_edge(self, block) -> bool:
         return any(self.is_multi_edge(e) for e in self.graph.edges(nbunch=block))
-
