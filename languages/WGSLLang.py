@@ -81,13 +81,11 @@ class WGSLLang(Language):
         error because it's missing the binding it just threw away.
         """
 
-        is_directions_buffer_used = is_max_out_degree_lt_two
+        # is_directions_buffer_used = is_max_out_degree_lt_two
 
         # Only needed for WGSL
         if code_type == CodeType.GLOBAL_ARRAY:
-            prevent_discarding_unused_bindings = "var use_input_data = input_data[0];\n" if is_directions_buffer_used else ''
-        elif code_type == CodeType.HEADER_GUARD:  # TODO: rm CodeType.HEADER_GUARD as shouldn't be needed
-            prevent_discarding_unused_bindings = "var use_input_data = input_data[0]; \n"
+            prevent_discarding_unused_bindings = "var use_input_data = input_data[0];\n"  # TODO: if is_directions_buffer_used else ''
         else:
             prevent_discarding_unused_bindings = ''
 
@@ -107,7 +105,7 @@ class WGSLLang(Language):
         elif code_type.is_array_type():
             return f"""
         @group(0) @binding(0) var<storage, read_write> output_data: array<i32>;
-        {code_type.if_global('@group(0) @binding(1) var < storage, read_write > input_data: array<i32>;')}
+        {code_type.if_global('@group(0) @binding(1) var <storage, read_write> input_data: array<i32>;')}
 
         @compute @workgroup_size(1) 
         fn control_flow( @builtin(global_invocation_id) id: vec3u ) {{

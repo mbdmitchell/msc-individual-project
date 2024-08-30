@@ -6,6 +6,10 @@ import os
 from typing import Optional
 
 
+def parse_int_list(string: str) -> list[int]:
+    return [int(x) for x in string.split(',')]
+
+
 def load_repo_paths_config():
 
     script_dir = os.path.dirname(os.path.abspath(__file__))

@@ -38,8 +38,8 @@ def main():
             bug_file.write(msg_)
         bug_report_memos.append(f'Bug found: report written to {bug_filename}')
 
-    def test_code(program_, direction_, args_, path_num):
-        match_, msg_ = tst_generated_code(program_, direction_, config, args=args_)
+    def test_code(program_, direction_, path_num):
+        match_, msg_ = tst_generated_code(program_, direction_, config)
         logging.debug(f'cfg_{g_ix}_path_{path_num}: {match_}, {msg_}')
         return match_, msg_
 
@@ -67,7 +67,7 @@ def main():
                     f'{test_directories.program_filepath}/program_class_{g_ix}_direction_{d_ix}.pickle', "rb"
                 ))
 
-            match, msg = test_code(program, direction, args, d_ix)
+            match, msg = test_code(program, direction, d_ix)
 
             if not match:
                 g_passes_all_tests = False
@@ -93,7 +93,7 @@ def main():
                 test_directories.remove_file(FileType.DIRECTIONS, graph_ix=g_ix)
                 if args.code_type == CodeType.GLOBAL_ARRAY:
                     test_directories.remove_file(FileType.CODE, graph_ix=g_ix,
-                                                 language=args.language)
+                                                 language=args.language, code_type=args.code_type)
                     test_directories.remove_file(FileType.PROGRAM_CLASS, graph_ix=g_ix,
                                                  language=args.language, code_type=args.code_type)
 

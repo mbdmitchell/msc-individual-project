@@ -2,6 +2,8 @@ import re
 import subprocess
 import tempfile
 
+from my_common import CodeType
+
 
 def wgsl_output_file_to_list(output_filepath) -> list[int]:
     cleaned_txt = re.sub(r'[^\d,]', '', _file_to_text(output_filepath))
@@ -16,14 +18,78 @@ def _file_to_text(output_filepath) -> str:
     return output_txt
 
 
+def tst_shader(shader_filepath: str,
+                    code_type: CodeType,
+                    expected_path: list[int],
+                    input_directions: list[int] = None,
+                    timeout: int = 5,
+                    env: dict = None):
+
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_filepath = temp_file.name
+        output_filepath = temp_filepath
+
+    command = [
+        'node',
+        '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/runner/wgsl/run-wgsl-new.js',
+        shader_filepath
+    ]
+
+    if code_type is CodeType.GLOBAL_ARRAY:
+        assert input_directions is not None
+        input_directions.append(0)
+        command.append(str(input_directions))
+
+    with open(output_filepath, 'w') as output_file:
+        subprocess.run(
+            command,
+            stdout=output_file,
+            stderr=subprocess.PIPE,
+            check=True,
+            text=True,
+            timeout=timeout,
+            env=env
+        )
+
+    actual_path = wgsl_output_file_to_list(output_filepath)
+    is_match = actual_path == expected_path
+
+    if is_match:
+        msg = f'Expected & Actual: {expected_path}'
+    else:
+        msg = f'Expected: {expected_path}.\nActual: {_file_to_text(output_filepath)}'
+
+    return is_match, msg
+
+def classify_shader_code_type(wgsl_shader_filepath: str) -> CodeType:
+    """Given shader file path, return the CodeType of the shader"""
+    with open(wgsl_shader_filepath, 'r') as file:
+        shader_code = file.read()
+
+    compute_position = shader_code.find('@compute')
+
+    if compute_position == -1:
+        raise ValueError("'@compute' not found. This function is only intended for compute shaders")
+
+    global_condition: bool = '@binding(1)' in shader_code[:compute_position]  # atm only global_array_code has two bindings
+    local_condition: bool = 'const input_data = array' in shader_code[:compute_position]
+
+    if global_condition:
+        return CodeType.GLOBAL_ARRAY
+    elif local_condition:
+        return CodeType.LOCAL_ARRAY
+    else:
+        raise ValueError("Unrecognised shader CodeType")
+
+
 def run_wgsl(program,
              input_directions: list[int] = None,
              output_filepath: str = None,
              expected_path: list[int] = None,
              timeout: int = 5,
-             env: dict = None,
-             shader_full_path: str = None
+             env: dict = None
              ):
+
     # Use a temporary file if output_filepath is None
     if output_filepath is None:
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -45,9 +111,6 @@ def run_wgsl(program,
         # Append 0 to handle edge case where input_directions is empty, ensuring shader uses the input_data binding
         input_directions.append(0)
         command.append(str(input_directions))
-
-    if shader_full_path is not None:
-        command.append(shader_full_path)
 
     with open(output_filepath, 'w') as output_file:
         subprocess.run(

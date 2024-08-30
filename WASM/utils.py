@@ -53,7 +53,7 @@ def optimise_wasm(unoptimised_wasm: str, opt_option: str, output_filepath: str =
         os.remove(unoptimised_wasm_filepath)
 
 
-def run_wasm(program, input_directions, output_filepath):
+def run_wasm(program, input_directions, output_filepath: str = None):
 
     code_filepath = program.get_file_path()
     expected_output = program.cfg.expected_output_path(input_directions)
@@ -61,6 +61,12 @@ def run_wasm(program, input_directions, output_filepath):
     with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt') as temp_file:
         temp_file.write(str(input_directions))
         temp_filepath = temp_file.name
+
+    # Use a temporary file if output_filepath is None
+    if output_filepath is None:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_filepath = temp_file.name
+            output_filepath = temp_filepath
 
     is_valid, msg = run_subprocess(
         ['node', './runner/run_wasm.js', code_filepath, temp_filepath, output_filepath]

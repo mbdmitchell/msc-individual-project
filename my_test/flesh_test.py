@@ -14,47 +14,32 @@ from .cfg_utilities import all_cfg_and_language_combos
 from my_common import generate_program, save_program, load_repo_paths_config
 from languages import Language, WASMLang, WGSLLang, GLSLLang
 
-
 def tst_generated_code(program,
                        input_directions: list[int],
                        config,
-                       clear_files_after=True,
-                       args=None):
+                       clear_files_after=True):
 
     language = program.get_language()
-    code_filepath = program.get_file_path()
 
-    code_directory = os.path.dirname(code_filepath)
-    output_filepath = os.path.join(code_directory, 'output.txt')
-    output_filepath = os.path.abspath(output_filepath)
+    # RUN
+    if isinstance(language, WASMLang):
+        is_match, msg = WASM.run_wasm(program, input_directions)
+    elif isinstance(language, WGSLLang):
+        code_filepath = program.get_file_path()
+        code_type = program.code_type
+        expected_directions = program.cfg.expected_output_path(input_directions)
+        try:
+            is_match, msg = WGSL.utils.tst_shader(code_filepath, code_type, expected_directions, input_directions)
+        except Exception as e:
+            return False, f"An error occurred: {e}"
 
-    # TEMP: FIX for evaluation. # TODO: find underlying cause
-    output_filepath = output_filepath.replace('/evaluation/evaluation/', '/evaluation/')
 
-    try:
+    elif isinstance(language, GLSLLang):
+        is_match, msg = GLSL.run_glsl(program, input_directions, config)
+    else:
+        raise ValueError("Language not handled")
 
-        # VALIDATE
-        if isinstance(language, WASMLang):
-            is_command_successful, msg = WASM.validate_wasm(code_filepath)
-            if not is_command_successful:
-                return is_command_successful, msg
-
-        # RUN
-        if isinstance(language, WASMLang):
-            is_match, msg = WASM.run_wasm(program, input_directions, output_filepath)
-        elif isinstance(language, WGSLLang):
-            is_match, msg = WGSL.run_wgsl(program, input_directions, output_filepath)
-        elif isinstance(language, GLSLLang):
-            is_match, msg = GLSL.run_glsl(program, input_directions, config)
-        else:
-            raise ValueError("Language not handled")
-
-        return is_match, msg
-
-    finally:
-        if clear_files_after:
-            if os.path.exists(output_filepath):
-                os.remove(output_filepath)
+    return is_match, msg
 
 
 def test_direction(program, direction):
