@@ -1,8 +1,8 @@
 import subprocess
 from pprint import pprint
 
-program_class_filepath = '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_bug_reduction/reduced_program_class.pickle'
-script_path = '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/testing/run_individual_test.py'
+program_class_filepath = '/evaluation/wgsl_bug_reduction/attempt1/reduced_program_class.pickle'
+script_path = '/testing/run_individual_test_via_program.py'
 
 
 def assemble_command(directions: tuple[int]) -> list[str]:
@@ -120,3 +120,5 @@ pprint(sorted_tuples)
 #   1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
 #   1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
 #   0, 0, 1, 0, 1, 0, 0, 0, 0, 0)]
+
+1,1,1,1,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,0,0,0,0,0

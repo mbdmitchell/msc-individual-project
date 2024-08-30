@@ -1,8 +1,9 @@
 const fs = require('fs');
 const config = require('../../config.json');
 
-//const DAWN_NODE_PATH = config['DAWN_NODE_PATH'];
-const DAWN_NODE_PATH = config['DAWN_MUTANT_NODE_PATH']
+const DAWN_NODE_PATH = config['DAWN_NODE_PATH'];
+//const DAWN_NODE_PATH = config['DAWN_MUTANT_NODE_PATH']
+//const DAWN_NODE_PATH = config['DAWN_MUTANT_TRACKING_NODE_PATH']
 
 const { create, globals } = require(DAWN_NODE_PATH);
 
@@ -118,10 +119,9 @@ async function test(shaderPath, input){
         const resultArray = Array.from(mappedRange);
 
         const result = resultArray.slice(0, resultArray.indexOf(0));
-
         resultBuffer.unmap();
+        console.log(JSON.stringify(result, null, 2));  // stringify ensures whole string printed
 
-        console.log(result);
     } catch (e) {
         console.log(e)
     }

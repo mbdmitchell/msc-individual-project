@@ -6,12 +6,11 @@ from my_common import CodeType
 
 # Original CFG/Program
 
-cfg = CFG.CFG("./graph.pickle")
+cfg = CFG.CFG("dupious_bug/attempt0/graph_1083.pickle")
 program = programs.WGSLProgram(cfg, CodeType.GLOBAL_ARRAY)
 program.save('/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_bug_reduction/shader')
 
-
-with open('./program_class.pickle', 'wb') as file:
+with open('dupious_bug/attempt0/program_class.pickle', 'wb') as file:
     pickle.dump(program, file)
 
 # Prune CFG/Program
@@ -45,5 +44,5 @@ cfg.add_edge(16, 6)
 reduced_program = programs.WGSLProgram(cfg, CodeType.GLOBAL_ARRAY)
 reduced_program.save('/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_bug_reduction/reduced_shader')
 
-with open('./reduced_program_class.pickle', 'wb') as file:
+with open('dupious_bug/attempt1/reduced_program_class.pickle', 'wb') as file:
     pickle.dump(reduced_program, file)
