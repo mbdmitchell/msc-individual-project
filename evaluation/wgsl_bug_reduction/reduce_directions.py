@@ -1,9 +1,16 @@
+import os
+import pickle
 import subprocess
 from pprint import pprint
 
-program_class_filepath = '/evaluation/wgsl_bug_reduction/attempt1/reduced_program_class.pickle'
-script_path = '/testing/run_individual_test_via_program.py'
+import WGSL.utils
+from CFG import CFG
 
+program_class_filepath = ...
+script_path = '../../testing/run_individual_test_via_program.py'
+
+with open('/evaluation/wgsl_bug_reduction/bug/graph_2439.pickle', 'rb') as file:
+    cfg: CFG = pickle.load(file)
 
 def assemble_command(directions: tuple[int]) -> list[str]:
     directions_str = ','.join(map(str, directions))
@@ -11,22 +18,19 @@ def assemble_command(directions: tuple[int]) -> list[str]:
     return command
 
 
-def is_path_mismatch(directions: tuple[int, ...]) -> bool:
+def is_path_mismatch(input_directions: tuple[int, ...]) -> bool:
 
-    command = assemble_command(directions)
     try:
-        result = subprocess.run(command, capture_output=True, text=True)
-    except subprocess.TimeoutExpired:
-        raise TimeoutError(f"Command timed out for directions: {directions}")
+        input_directions = list(input_directions)
+        shader_filepath = ...
+        code_type = WGSL.utils.classify_shader_code_type(shader_filepath)
+        expected_path = cfg.expected_output_path(input_directions)
+        env = os.environ.copy()
+
+        is_match, msg = WGSL.utils.tst_shader(shader_filepath, code_type, expected_path, input_directions, env=env)
+        return not is_match
     except Exception as e:
         raise Exception(f"An error occurred: {e}")
-
-    stdout: str = result.stdout.strip()
-
-    if "False" in stdout:  # i.e. if actual path != expected path
-        return True
-    else:
-        return False
 
 
 def all_directions_with_n_consecutive_elems_removed(lst: tuple[int, ...], no_of_elems: int) -> set[tuple[int, ...]]:
@@ -37,20 +41,19 @@ def all_directions_with_n_consecutive_elems_removed(lst: tuple[int, ...], no_of_
     return set_of_tuples
 
 
-
 def calc_failing_subsequences(directions: tuple[int, ...]) -> set[tuple[int, ...]]:
 
     tested_subsequences = set()
 
-    def calc_failing_subsequences_aux(_directions: tuple[int, ...], remove_n_consecutive_elems: int) -> set[tuple[int, ...]]:
+    def calc_failing_subsequences_aux(remove_n_consecutive_elems: int) -> set[tuple[int, ...]]:
 
         if remove_n_consecutive_elems == 0:
             return set()
 
-        print(f"Testing {_directions}, removing {remove_n_consecutive_elems} consecutive elements...")
+        print(f"Testing {directions}, removing {remove_n_consecutive_elems} consecutive elements...")
 
         # all subsequences for given _directions
-        direction_subsequences = all_directions_with_n_consecutive_elems_removed(_directions,
+        direction_subsequences = all_directions_with_n_consecutive_elems_removed(directions,
                                                                                  remove_n_consecutive_elems)
 
         # calc failing subsequences
@@ -71,54 +74,24 @@ def calc_failing_subsequences(directions: tuple[int, ...]) -> set[tuple[int, ...
 
         if len(failing_direction_subsequences) == 0:
             print(f"No failing direction subsequences. Trying again direction again... ")
-            return calc_failing_subsequences_aux(_directions, remove_n_consecutive_elems - 1)
+            return calc_failing_subsequences_aux(remove_n_consecutive_elems - 1)
         else:
             print(f"Failing direction subsequence(s) found. Calling failing_subsequences_aux for each... ")
             all_failing = set(failing_direction_subsequences)
             for f in failing_direction_subsequences:
-                all_failing.update(calc_failing_subsequences_aux(f, remove_n_consecutive_elems))
+                all_failing.update(calc_failing_subsequences_aux(remove_n_consecutive_elems))
             return all_failing
 
-    return calc_failing_subsequences_aux(directions, remove_n_consecutive_elems=12)
-    # '12' is specific to code_1083 bug. Could start at as high as len(directions) - 1...
-    # but in practise it doesn't help and takes longer
+    # start by trying to remove half the directions (number arbitrary)
+    return calc_failing_subsequences_aux(len(directions)//2)
 
 
 # --------------------------------------------------------------------------------------------------------
 
-# the initial directions that caused cfg_1083_path_6 to fail
-# [1, 1, 1, 1, 1, 0, 2, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
-#  0, 0, 0, 0 ]
-
-# --------------------------------------------------------------------------------------------------------
-
-starting_directions = (1, 1, 1, 1, 1, 0, 2, 1, 0, 1,
-                       0, 1, 1, 1, 0, 1, 1, 1, 0, 1,
-                       1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-                       0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
-                       0, 0, 0)
+starting_directions = (...)  # tuple of directions
 
 
 failing_subsequences: set[tuple[int, ...]] = calc_failing_subsequences(starting_directions)
 sorted_tuples: list[tuple[int, ...]] = sorted(failing_subsequences, key=len)
 
 pprint(sorted_tuples)
-
-# --------------------------------------------------------------------------------------------------------
-
-# FROM...
-
-# (1, 1, 1, 1, 1, 0, 2, 1, 0, 1,
-#  0, 1, 1, 1, 0, 1, 1, 1, 0, 1,
-#  1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-#  0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
-#  0, 0, 0)
-
-# FINAL: shortened directions that still fail
-
-# [(1, 1, 1, 1, 1, 0, 1, 0, 1, 0,
-#   1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-#   1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
-#   0, 0, 1, 0, 1, 0, 0, 0, 0, 0)]
-
-1,1,1,1,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,0,0,0,0,0

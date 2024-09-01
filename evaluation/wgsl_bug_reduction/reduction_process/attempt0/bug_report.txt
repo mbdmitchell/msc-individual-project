@@ -1,0 +1,6 @@
+bug report from the running the test harness
+
+cfg filepath
+
+Expected: [...]
+Actual: [...]

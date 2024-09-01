@@ -1,0 +1,5 @@
+{
+    "wgsl_shader_path": "./shader.wgsl",
+    "input_directions_str": "1, 1, ...",
+    "expected_path_str": "1, 3, ..."
+}
