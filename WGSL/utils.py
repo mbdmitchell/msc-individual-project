@@ -72,14 +72,11 @@ def classify_shader_code_type(wgsl_shader_filepath: str) -> CodeType:
         raise ValueError("'@compute' not found. This function is only intended for compute shaders")
 
     global_condition: bool = '@binding(1)' in shader_code[:compute_position]  # atm only global_array_code has two bindings
-    local_condition: bool = 'const input_data = array' in shader_code[:compute_position]
 
     if global_condition:
         return CodeType.GLOBAL_ARRAY
-    elif local_condition:
-        return CodeType.LOCAL_ARRAY
     else:
-        raise ValueError("Unrecognised shader CodeType")
+        return CodeType.LOCAL_ARRAY
 
 
 def run_wgsl(program,
