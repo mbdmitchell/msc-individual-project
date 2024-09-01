@@ -61,11 +61,10 @@ def main():
 
             p_passes_all_tests = True
 
-            # Load the program per direction for STATIC code type
-            if args.code_type == CodeType.HEADER_GUARD:
-                program = pickle.load(open(
-                    f'{test_directories.program_filepath}/program_class_{g_ix}_direction_{d_ix}.pickle', "rb"
-                ))
+            # Load the program per direction for LOCAL_ARRAY code type
+            program = pickle.load(open(
+                f'{test_directories.program_filepath}/program_class_{g_ix}_direction_{d_ix}.pickle', "rb"
+            ))
 
             match, msg = test_code(program, direction, d_ix)
 
@@ -111,7 +110,7 @@ def flesh_cfgs(args, cfg, i: int, test_directories):
         save_program(program, f'{test_directories.code_filepath}/code_{i}', opt_level=getattr(args, 'opt_level', None))
         pickle.dump(program, open(f'{test_directories.program_filepath}/program_class_{i}.pickle', "wb"))
 
-    elif args.code_type == CodeType.STATIC:
+    elif args.code_type == CodeType.LOCAL_ARRAY:
         # Each path needs its own program
         directions = pickle.load(open(f'{test_directories.directions_filepath}/directions_{i}.pickle', 'rb'))
 
