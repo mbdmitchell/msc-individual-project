@@ -24,7 +24,7 @@ async function test(shaderPath, input){
     try {
         const is_global_array_code_type = input !== null;
 
-        const buffer_size = 512 // 4 * 128 (i32 size * max no_of_elem)
+        const buffer_size = 2048 // 8 * 256 (i32 size * max no_of_elem)  TODO: Make dependant on size of CFG
 
         const adapter = await navigator.gpu?.requestAdapter();
 
