@@ -6,8 +6,8 @@ from enum import Enum
 # directions are "baked-in" to the program. E.g. the dir array resulting in looping 3x vs recognising it loops 3x and
 # having a for loop iterated that number of times.
 class CodeType(Enum):
-    GLOBAL_ARRAY = 'global'
-    LOCAL_ARRAY = 'local'
+    GLOBAL_ARRAY = 'global_array'
+    LOCAL_ARRAY = 'local_array'
     HEADER_GUARD = 'guard'
 
     def __str__(self):

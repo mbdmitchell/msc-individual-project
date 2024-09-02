@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import tempfile
@@ -19,21 +20,23 @@ def _file_to_text(output_filepath) -> str:
 
 
 def tst_shader(shader_filepath: str,
-                    code_type: CodeType,
-                    expected_path: list[int],
-                    input_directions: list[int] = None,
-                    timeout: int = 5,
-                    env: dict = None):
-
+               expected_path: list[int],
+               input_directions: list[int] = None,
+               timeout: int = 5,
+               env: dict = None):
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_filepath = temp_file.name
         output_filepath = temp_filepath
+
+    print("in tst_shader:", os.environ['DREDD_MUTANT_TRACKING_FILE'])
 
     command = [
         'node',
         '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/runner/wgsl/run-wgsl-new.js',
         shader_filepath
     ]
+
+    code_type = classify_shader_code_type(shader_filepath)
 
     if code_type is CodeType.GLOBAL_ARRAY:
         assert input_directions is not None
@@ -48,7 +51,7 @@ def tst_shader(shader_filepath: str,
             check=True,
             text=True,
             timeout=timeout,
-            env=env
+            env=os.environ if env is None else env
         )
 
     actual_path = wgsl_output_file_to_list(output_filepath)
@@ -61,6 +64,7 @@ def tst_shader(shader_filepath: str,
 
     return is_match, msg
 
+
 def classify_shader_code_type(wgsl_shader_filepath: str) -> CodeType:
     """Given shader file path, return the CodeType of the shader"""
     with open(wgsl_shader_filepath, 'r') as file:
@@ -71,7 +75,8 @@ def classify_shader_code_type(wgsl_shader_filepath: str) -> CodeType:
     if compute_position == -1:
         raise ValueError("'@compute' not found. This function is only intended for compute shaders")
 
-    global_condition: bool = '@binding(1)' in shader_code[:compute_position]  # atm only global_array_code has two bindings
+    global_condition: bool = '@binding(1)' in shader_code[
+                                              :compute_position]  # atm only global_array_code has two bindings
 
     if global_condition:
         return CodeType.GLOBAL_ARRAY
@@ -86,7 +91,6 @@ def run_wgsl(program,
              timeout: int = 5,
              env: dict = None
              ):
-
     # Use a temporary file if output_filepath is None
     if output_filepath is None:
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -96,7 +100,8 @@ def run_wgsl(program,
     # TEMP fix
     program_path = program.get_file_path()
     if "evaluation" in program_path:
-        program_path = program_path.replace("././evaluation", "/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_test_programs")
+        program_path = program_path.replace("././evaluation",
+                                            "/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_test_programs")
 
     command = [
         'node',
@@ -117,7 +122,7 @@ def run_wgsl(program,
             check=True,
             text=True,
             timeout=timeout,
-            env=env
+            env=os.environ if env is None else env
         )
 
     # Compare the actual output with the expected output

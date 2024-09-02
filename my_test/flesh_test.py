@@ -26,10 +26,9 @@ def tst_generated_code(program,
         is_match, msg = WASM.run_wasm(program, input_directions)
     elif isinstance(language, WGSLLang):
         code_filepath = program.get_file_path()
-        code_type = program.code_type
         expected_directions = program.cfg.expected_output_path(input_directions)
         try:
-            is_match, msg = WGSL.utils.tst_shader(code_filepath, code_type, expected_directions, input_directions)
+            is_match, msg = WGSL.utils.tst_shader(code_filepath, expected_directions, input_directions)
         except Exception as e:
             return False, f"An error occurred: {e}"
 
