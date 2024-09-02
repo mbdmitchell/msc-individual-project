@@ -27,7 +27,7 @@ def is_path_mismatch(input_directions: tuple[int, ...]) -> bool:
         expected_path = cfg.expected_output_path(input_directions)
         env = os.environ.copy()
 
-        is_match, msg = WGSL.utils.tst_shader(shader_filepath, code_type, expected_path, input_directions, env=env)
+        is_match, msg = WGSL.utils.tst_shader(shader_filepath, expected_path, input_directions, env=env)
         return not is_match
     except Exception as e:
         raise Exception(f"An error occurred: {e}")
