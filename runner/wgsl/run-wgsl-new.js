@@ -1,10 +1,25 @@
 const fs = require('fs');
 const config = require('../../config.json');
 
-const DAWN_NODE_PATH = config['DAWN_NODE_PATH'];
-//const DAWN_NODE_PATH = config['DAWN_MUTANT_NODE_PATH']
-//const DAWN_NODE_PATH = config['DAWN_MUTANT_TRACKING_NODE_PATH']
+function envToDawnVariantFilePath(env) {
 
+    if (!env || !env.hasOwnProperty("DAWN_VARIANT")) {
+        return config["DAWN_NODE_PATH"];
+    }
+
+    switch (env["DAWN_VARIANT"]) {
+        case 'normal':
+            return config["DAWN_NODE_PATH"];
+        case 'meta_mutant':
+            return config["DAWN_MUTANT_NODE_PATH"];
+        case 'mutant_tracking':
+            return config["DAWN_MUTANT_TRACKING_NODE_PATH"];
+        default:
+            throw new Error("Unrecognised DAWN_VARIANT value");
+    }
+}
+
+const DAWN_NODE_PATH = envToDawnVariantFilePath(process.env);
 const { create, globals } = require(DAWN_NODE_PATH);
 
 Object.assign(globalThis, globals); // Provides constants like GPUBufferUsage.MAP_READ
