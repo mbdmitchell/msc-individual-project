@@ -1,6 +1,6 @@
 {
     "DAWN_NODE_PATH": "/Users/maxmitchell/dawn/out/Debug/dawn.node",
-    "DAWN_MUTANT_NODE_PATH": "/Users/maxmitchell/dawn-mutant/out/Debug/dawn.node",
-    "DAWN_MUTANT_TRACKING_NODE_PATH": "/Users/maxmitchell/dawn-mutant-tracking/out/Debug/dawn.node",
+    "DAWN_MUTANT_NODE_PATH": "/Users/maxmitchell/dawn_meta_mutant/out/Debug/dawn.node",
+    "DAWN_MUTANT_TRACKING_NODE_PATH": "/Users/maxmitchell/dawn_mutant_tracking/out/Debug/dawn.node",
     "SHADERTRAP_PATH": "/homes/mbm22/Documents/modules/msc-project/shadertrap/build/src/shadertrap/shadertrap"
 }
