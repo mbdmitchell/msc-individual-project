@@ -32,8 +32,6 @@ def tst_generated_code(program,
             is_match, msg = tst_shader(code_filepath, expected_directions, os.environ.copy(), input_directions)
         except Exception as e:
             return False, f"An error occurred: {e}"
-
-
     elif isinstance(language, GLSLLang):
         is_match, msg = GLSL.run_glsl(program, input_directions, config)
     else:
