@@ -11,8 +11,8 @@ from typing import Optional
 def parse_int_list(string: str) -> list[int]:
     return [int(x) for x in string.split(',')]
 
-log_file = '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/execution_times.txt'
 
+log_file = '../execution_times.txt'
 
 def log_execution_time(file_path=log_file):
     def decorator(func):
