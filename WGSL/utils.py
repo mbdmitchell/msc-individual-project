@@ -1,9 +1,10 @@
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
-from my_common import CodeType
+from my_common import CodeType, load_repo_paths_config
 
 
 def wgsl_output_file_to_list(output_filepath) -> list[int]:
@@ -21,14 +22,13 @@ def _file_to_text(output_filepath) -> str:
 
 def tst_shader(shader_filepath: str,
                expected_path: list[int],
+               env: dict,
                input_directions: list[int] = None,
-               timeout: int = 5,
-               env: dict = None):
+               timeout: int = 5):
+
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_filepath = temp_file.name
         output_filepath = temp_filepath
-
-    print("in tst_shader:", os.environ['DREDD_MUTANT_TRACKING_FILE'])
 
     command = [
         'node',
@@ -44,15 +44,22 @@ def tst_shader(shader_filepath: str,
         command.append(str(input_directions))
 
     with open(output_filepath, 'w') as output_file:
-        subprocess.run(
-            command,
-            stdout=output_file,
-            stderr=subprocess.PIPE,
-            check=True,
-            text=True,
-            timeout=timeout,
-            env=os.environ if env is None else env
-        )
+        try:
+            subprocess.run(
+                command,
+                stdout=output_file,
+                stderr=subprocess.PIPE,
+                check=True,
+                text=True,
+                timeout=timeout,
+                env=env
+            )
+        except subprocess.CalledProcessError as e:
+            return False, f"subprocess.CalledProcessError: {e}"
+        except FileNotFoundError:
+            return False, "FileNotFoundError"
+        except Exception as e:
+            return False, f"Exception {e}"
 
     actual_path = wgsl_output_file_to_list(output_filepath)
     is_match = actual_path == expected_path
@@ -75,67 +82,10 @@ def classify_shader_code_type(wgsl_shader_filepath: str) -> CodeType:
     if compute_position == -1:
         raise ValueError("'@compute' not found. This function is only intended for compute shaders")
 
-    global_condition: bool = '@binding(1)' in shader_code[
-                                              :compute_position]  # atm only global_array_code has two bindings
+    # NB: only global_array_code has two bindings
+    global_condition: bool = '@binding(1)' in shader_code[:compute_position]
 
     if global_condition:
         return CodeType.GLOBAL_ARRAY
     else:
         return CodeType.LOCAL_ARRAY
-
-
-def run_wgsl(program,
-             input_directions: list[int] = None,
-             output_filepath: str = None,
-             expected_path: list[int] = None,
-             timeout: int = 5,
-             env: dict = None
-             ):
-    # Use a temporary file if output_filepath is None
-    if output_filepath is None:
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_filepath = temp_file.name
-            output_filepath = temp_filepath
-
-    # TEMP fix
-    program_path = program.get_file_path()
-    if "evaluation" in program_path:
-        program_path = program_path.replace("././evaluation",
-                                            "/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/evaluation/wgsl_test_programs")
-
-    command = [
-        'node',
-        '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/runner/wgsl/run-wgsl-new.js',
-        program_path
-    ]
-
-    if input_directions is not None:
-        # Append 0 to handle edge case where input_directions is empty, ensuring shader uses the input_data binding
-        input_directions.append(0)
-        command.append(str(input_directions))
-
-    with open(output_filepath, 'w') as output_file:
-        subprocess.run(
-            command,
-            stdout=output_file,
-            stderr=subprocess.PIPE,
-            check=True,
-            text=True,
-            timeout=timeout,
-            env=os.environ if env is None else env
-        )
-
-    # Compare the actual output with the expected output
-    actual_path = wgsl_output_file_to_list(output_filepath)
-
-    if input_directions is not None and expected_path is None:
-        expected_path = program.cfg.expected_output_path(input_directions)
-
-    is_match = actual_path == expected_path
-
-    if is_match:
-        msg = f'Expected & Actual: {expected_path}'
-    else:
-        msg = f'Expected: {expected_path}.\nActual: {_file_to_text(output_filepath)}'
-
-    return is_match, msg

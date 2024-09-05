@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from CFG.CFGGenerator import GeneratorConfig
 from languages import Language, WASMLang
-from my_common import generate_program, save_program, load_repo_paths_config
+from my_common import generate_program, save_program, load_repo_paths_config, log_execution_time
 from my_common.CodeType import CodeType
 from CFG import CFGGenerator
 from my_test import tst_generated_code
@@ -21,8 +21,85 @@ def main():
     config = load_repo_paths_config()
     setup_logging(args.verbose)
 
-    logging.info("Creating folders...")
+    logging.info(f"Creating folders at {args.output_folder}...")
     test_directories = TestDirectories(f'./{args.output_folder}')
+
+    @log_execution_time()
+    def process_cfgs():
+        for i_ in tqdm(range(args.no_of_graphs), desc="Fleshing CFGs"):
+            cfg_ = pickle.load(open(f'{test_directories.cfg_filepath}/graph_{i_}.pickle', 'rb'))
+            flesh_cfgs(args, cfg_, i_, test_directories)
+
+    @log_execution_time()
+    def run_tests():
+        for g_ix in tqdm(range(args.no_of_graphs), desc="Running tests"):
+
+            paths = pickle.load(open(f'{test_directories.directions_filepath}/directions_{g_ix}.pickle', 'rb'))
+            bug_report_memos = []
+            g_passes_all_tests = True
+
+            # Load the program once for GLOBAL_ARRAY code type
+            if args.code_type is CodeType.GLOBAL_ARRAY:
+                program = pickle.load(open(f'{test_directories.program_filepath}/program_class_{g_ix}.pickle', "rb"))
+
+            for d_ix, direction in enumerate(paths):
+
+                p_passes_all_tests = True
+
+                # Load the program per direction for LOCAL_ARRAY code type
+                if args.code_type is CodeType.LOCAL_ARRAY:
+                    program = pickle.load(open(
+                        f'{test_directories.program_filepath}/program_class_{g_ix}_direction_{d_ix}.pickle', "rb"
+                    ))
+
+                match, msg = test_code(program, direction, d_ix, g_ix)
+
+                if not match:
+                    g_passes_all_tests = False
+                    p_passes_all_tests = False
+                    report = create_bug_report(direction, d_ix, msg, program, g_ix)
+                    bug_report_memos.append(report)
+
+                # Tidy direction-specific test files
+                if args.code_type == CodeType.GLOBAL_ARRAY:
+                    continue  # there are no direction-specific test files
+                if args.tidy:
+                    if (p_passes_all_tests and args.tidy_mode == 'working') \
+                            or (not p_passes_all_tests and args.tidy_mode == 'non-working'):
+                        test_directories.remove_file(FileType.CODE, graph_ix=g_ix, direction_ix=d_ix,
+                                                     language=args.language, code_type=args.code_type)
+                        test_directories.remove_file(FileType.PROGRAM_CLASS, graph_ix=g_ix, direction_ix=d_ix,
+                                                     language=args.language, code_type=args.code_type)
+
+            # Tidy test files
+            if args.tidy:
+                if (g_passes_all_tests and args.tidy_mode == 'working') \
+                        or (not g_passes_all_tests and args.tidy_mode == 'non-working'):
+                    test_directories.remove_file(FileType.CFG, graph_ix=g_ix)
+                    test_directories.remove_file(FileType.DIRECTIONS, graph_ix=g_ix)
+                    if args.code_type == CodeType.GLOBAL_ARRAY:
+                        test_directories.remove_file(FileType.CODE, graph_ix=g_ix,
+                                                     language=args.language, code_type=args.code_type)
+                        test_directories.remove_file(FileType.PROGRAM_CLASS, graph_ix=g_ix,
+                                                     language=args.language, code_type=args.code_type)
+
+            if bug_report_memos:
+                logging.info(bug_report_memos)
+
+    def create_bug_report(direction_, p_, msg_, program_, g_ix) -> str:
+        bug_filename = f'{test_directories.bugs_filepath}/{program_.language.extension()}_bug_cfg_{g_ix}_path{p_}.txt'
+        with open(bug_filename, 'w') as bug_file:
+            bug_file.write(f'CFG: {test_directories.cfg_filepath}/graph_{g_ix}.pickle\n\n')
+            bug_file.write(f"Directions: {direction_}\n\n")
+            bug_file.write(msg_)
+        return bug_filename
+
+    def test_code(program_, direction_, path_num, g_ix):
+        match_, msg_ = tst_generated_code(program_, direction_, config)
+        logging.debug(f'cfg_{g_ix}_path_{path_num}: {match_}, {msg_}')
+        return match_, msg_
+
+    # ------------
 
     logging.info("Generating CFGs...")
     generate_cfgs(args, test_directories.cfg_filepath)
@@ -30,77 +107,9 @@ def main():
     logging.info("Generating directions...")
     generate_direction_paths(args, test_directories.cfg_filepath, test_directories.directions_filepath)
 
-    def create_bug_report(direction_, p_, msg_, program_):
-        bug_filename = f'{test_directories.bugs_filepath}/{program_.language.extension()}_bug_cfg_{g_ix}_path{p_}.txt'
-        with open(bug_filename, 'w') as bug_file:
-            bug_file.write(f'CFG: {test_directories.cfg_filepath}/graph_{g_ix}.pickle\n\n')
-            bug_file.write(f"Directions: {direction_}\n\n")
-            bug_file.write(msg_)
-        bug_report_memos.append(f'Bug found: report written to {bug_filename}')
-
-    def test_code(program_, direction_, path_num):
-        match_, msg_ = tst_generated_code(program_, direction_, config)
-        logging.debug(f'cfg_{g_ix}_path_{path_num}: {match_}, {msg_}')
-        return match_, msg_
-
-    for i in tqdm(range(args.no_of_graphs), desc="Fleshing CFGs"):
-        cfg = pickle.load(open(f'{test_directories.cfg_filepath}/graph_{i}.pickle', 'rb'))
-        flesh_cfgs(args, cfg, i, test_directories)
-
-    for g_ix in tqdm(range(args.no_of_graphs), desc="Running tests"):
-
-        paths = pickle.load(open(f'{test_directories.directions_filepath}/directions_{g_ix}.pickle', 'rb'))
-        bug_report_memos = []
-        g_passes_all_tests = True
-
-        # Load the program once for GLOBAL_ARRAY code type
-        if args.code_type == CodeType.GLOBAL_ARRAY:
-            program = pickle.load(open(f'{test_directories.program_filepath}/program_class_{g_ix}.pickle', "rb"))
-
-        for d_ix, direction in enumerate(paths):
-
-            p_passes_all_tests = True
-
-            # Load the program per direction for LOCAL_ARRAY code type
-            program = pickle.load(open(
-                f'{test_directories.program_filepath}/program_class_{g_ix}_direction_{d_ix}.pickle', "rb"
-            ))
-
-            match, msg = test_code(program, direction, d_ix)
-
-            if not match:
-                g_passes_all_tests = False
-                p_passes_all_tests = False
-                create_bug_report(direction, d_ix, msg, program)
-
-            # Tidy direction-specific test files
-            if args.code_type == CodeType.GLOBAL_ARRAY:
-                continue  # there are no direction-specific test files
-            if args.tidy:
-                if (p_passes_all_tests and args.tidy_mode == 'working') \
-                        or (not p_passes_all_tests and args.tidy_mode == 'non-working'):
-                    test_directories.remove_file(FileType.CODE, graph_ix=g_ix, direction_ix=d_ix,
-                                                 language=args.language, code_type=args.code_type)
-                    test_directories.remove_file(FileType.PROGRAM_CLASS, graph_ix=g_ix, direction_ix=d_ix,
-                                                 language=args.language, code_type=args.code_type)
-
-        # Tidy test files
-        if args.tidy:
-            if (g_passes_all_tests and args.tidy_mode == 'working') \
-                    or (not g_passes_all_tests and args.tidy_mode == 'non-working'):
-                test_directories.remove_file(FileType.CFG, graph_ix=g_ix)
-                test_directories.remove_file(FileType.DIRECTIONS, graph_ix=g_ix)
-                if args.code_type == CodeType.GLOBAL_ARRAY:
-                    test_directories.remove_file(FileType.CODE, graph_ix=g_ix,
-                                                 language=args.language, code_type=args.code_type)
-                    test_directories.remove_file(FileType.PROGRAM_CLASS, graph_ix=g_ix,
-                                                 language=args.language, code_type=args.code_type)
-
-        if bug_report_memos:
-            logging.info(bug_report_memos)
-
+    process_cfgs()
+    run_tests()
     logging.info("DONE!")
-    # TODO: Add report.txt w/ all bugs (if any) found, any paths aborted, all harness params --min_depth=2 --max_depth=3
 
 
 def flesh_cfgs(args, cfg, i: int, test_directories):
@@ -162,6 +171,7 @@ def generate_cfg_paths(cfg, graph_no, no_of_paths):
     return [list(path) for path in paths_set], aborted_path
 
 
+@log_execution_time()
 def generate_cfgs(args, cfg_filepath: str):
     if args.cfg_source == 'random':
         CFGGenerator(GeneratorConfig.allow_all(args.language)).generate_cfgs_method_uniform(
@@ -177,6 +187,7 @@ def generate_cfgs(args, cfg_filepath: str):
         raise ValueError("cfg_source not handled")  # shouldn't get here anyway 'cause throws if invalid at start
 
 
+@log_execution_time()
 def generate_direction_paths(args, cfg_filepath, directions_filepath):
     aborted_paths = []
 
@@ -240,9 +251,8 @@ def parse_command_line_args():
     # Confirm valid args
     if args.min_depth > args.max_depth:
         parser.error("args.min_depth > args.max_depth")
-    if isinstance(args.language, WASMLang) and args.code_type == 'header_guard':
-        parser.error("The 'header_guard' code type is not fully supported for WASM")
-
+    if args.code_type == 'header_guard':
+        parser.error("The 'header_guard' code type is not fully supported yet")
 
     # Final arg assignment
     if args.output_folder is None:

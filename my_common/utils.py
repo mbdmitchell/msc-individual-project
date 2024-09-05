@@ -3,12 +3,33 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
+from functools import wraps
 from typing import Optional
 
 
 def parse_int_list(string: str) -> list[int]:
     return [int(x) for x in string.split(',')]
 
+log_file = '/Users/maxmitchell/Documents/msc-control-flow-fleshing-project/execution_times.txt'
+
+
+def log_execution_time(file_path=log_file):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = func(*args, **kwargs)  # execute function
+            end_time = time.time()
+            execution_time = end_time - start_time
+            with open(file_path, 'a') as f:  # log to file
+                f.write(f"Function '{func.__name__}' executed in {execution_time:.6f} seconds\n")
+
+            return result
+
+        return wrapper
+
+    return decorator
 
 def load_repo_paths_config():
 
