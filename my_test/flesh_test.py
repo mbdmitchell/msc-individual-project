@@ -10,6 +10,7 @@ import WGSL
 
 from CFG import CFGGenerator
 from CFG.CFGGenerator import GeneratorConfig
+from WGSL.utils import tst_shader
 from .cfg_utilities import all_cfg_and_language_combos
 from my_common import generate_program, save_program, load_repo_paths_config
 from languages import Language, WASMLang, WGSLLang, GLSLLang
@@ -25,10 +26,10 @@ def tst_generated_code(program,
     if isinstance(language, WASMLang):
         is_match, msg = WASM.run_wasm(program, input_directions)
     elif isinstance(language, WGSLLang):
-        code_filepath = program.get_file_path()
+        code_filepath = os.path.join('/Users/maxmitchell/Documents/msc-control-flow-fleshing-project', program.get_file_path())  # TODO: address underlying issue w/ get_file_path()
         expected_directions = program.cfg.expected_output_path(input_directions)
         try:
-            is_match, msg = WGSL.utils.tst_shader(code_filepath, expected_directions, input_directions)
+            is_match, msg = tst_shader(code_filepath, expected_directions, os.environ.copy(), input_directions)
         except Exception as e:
             return False, f"An error occurred: {e}"
 
