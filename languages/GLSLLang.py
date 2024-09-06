@@ -54,8 +54,7 @@ class GLSLLang(Language):
         """For array-based CodeType."""
         return f"""
             cntrl_ix++;
-            {Language.cntrl_val_var_name()} = {GLSLLang().input_data_array_name}[cntrl_ix];
-            """
+            {Language.cntrl_val_var_name()} = {GLSLLang().input_data_array_name}[cntrl_ix];"""
 
     @property
     def continue_code(self) -> str:
@@ -71,7 +70,7 @@ class GLSLLang(Language):
 
     @staticmethod
     def directions_layout_binding():
-        return f"layout(std430, binding = 1) buffer directions {{\n\tint {GLSLLang().input_data_array_name}[];\n}};"
+        return f"layout(std430, binding = 1) buffer directions {{\n\tint {GLSLLang().input_data_array_name}[];\n}}"
 
     # FULL CODE
 
