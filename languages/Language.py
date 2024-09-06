@@ -136,6 +136,10 @@ class Language(ABC, metaclass=LanguageMeta):
     def input_data_array_name(self):
         return 'input_data'
 
+    @property
+    def output_data_array_name(self):
+        return 'output_data'
+
     @staticmethod
     @abstractmethod
     def array_declaration_pre_format():
