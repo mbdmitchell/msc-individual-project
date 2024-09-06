@@ -71,7 +71,7 @@ class GLSLLang(Language):
 
     @staticmethod
     def directions_layout_binding():
-        return f"layout(std430, binding = 1) buffer directions {{\n\tuint {GLSLLang().input_data_array_name}[];\n}};"
+        return f"layout(std430, binding = 1) buffer directions {{\n\tint {GLSLLang().input_data_array_name}[];\n}};"
 
     # FULL CODE
 
@@ -85,7 +85,7 @@ class GLSLLang(Language):
                     layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
                     layout(std430, binding = 0) buffer actual_path {{
-                        uint {GLSLLang().output_data_array_name}[];
+                        int {GLSLLang().output_data_array_name}[];
                     }};
                     """
 
