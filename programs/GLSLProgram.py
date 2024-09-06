@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from typing import Optional
 
 import CFG
@@ -41,6 +42,11 @@ def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_direc
     expected_path_padded_with_zeros = _list_to_space_separated_values(
         expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path))  # TODO: Figure how remove incorrect warning
     )
+
+    # TODO: find way to incorporate into the initial shader code construction, rather than at this stage.
+    if code_type is CodeType.GLOBAL_ARRAY:
+        shader_code = re.sub(r"\s*uint input_data\[];", f"uint input_data[{len(input_directions)}];", shader_code)
+    shader_code = re.sub(r"\s*uint output_data\[];", f"uint output_data[{path_buffer_size}];", shader_code)
 
     return f"""GL 4.5
 
@@ -85,12 +91,10 @@ class GLSLProgram(Program):
         # Optional expected_path to allow for generating (intentionally) incorrect shadertrap tests.
         # Optional input_directions as not needed for CodeType.STATIC programs as path is built in to the code
         if self.code_type == CodeType.GLOBAL_ARRAY:
-
             if not input_directions:
                 raise ValueError("Missing input_directions")
 
         elif self.code_type == CodeType.HEADER_GUARD:
-
             if not (expected_path or input_directions):
                 raise ValueError("Need either expected_path or input_directions to generate shader test")
 

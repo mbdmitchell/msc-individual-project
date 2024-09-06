@@ -9,7 +9,7 @@ from TestDirectories import *
 from tqdm import tqdm
 
 from CFG.CFGGenerator import GeneratorConfig
-from languages import Language, WASMLang
+from languages import Language, WASMLang, GLSLLang
 from my_common.utils import generate_program, save_program, load_repo_paths_config, log_execution_time
 from my_common.CodeType import CodeType
 from CFG import CFGGenerator
@@ -114,7 +114,6 @@ def main():
 
 def flesh_cfgs(args, cfg, i: int, test_directories):
     if args.code_type == CodeType.GLOBAL_ARRAY:
-        # All paths use same program
         program = generate_program(args, cfg)
         save_program(program, f'{test_directories.code_filepath}/code_{i}', opt_level=getattr(args, 'opt_level', None))
         pickle.dump(program, open(f'{test_directories.program_filepath}/program_class_{i}.pickle', "wb"))
