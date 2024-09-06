@@ -16,7 +16,6 @@ from code_builders import CodeBuilderFactory
 
 
 def _list_to_space_separated_values(values: Optional[list[int]]) -> str:
-
     if not values:
         return ''
 
@@ -33,6 +32,7 @@ def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_direc
     path_buffer_size = len(expected_path) + 1
 
     path_buffer_size_in_bytes = path_buffer_size * 4  # 32-bit ints
+
     directions_size_in_bytes = 0 if not input_directions else len(input_directions) * 4
 
     directions_array_buffer = f"CREATE_BUFFER directions SIZE_BYTES {directions_size_in_bytes} INIT_VALUES int {_list_to_space_separated_values(input_directions)}\n\n"
@@ -40,13 +40,20 @@ def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_direc
     buffer_full_of_zeros = _list_to_space_separated_values([0] * path_buffer_size)
 
     expected_path_padded_with_zeros = _list_to_space_separated_values(
-        expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path))  # TODO: Figure how remove incorrect warning
+        expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path))
+        # TODO: Figure how remove incorrect warning
     )
 
     # TODO: find way to incorporate into the initial shader code construction, rather than at this stage.
     if code_type is CodeType.GLOBAL_ARRAY:
         shader_code = re.sub(r"\s*int input_data\[];", f"int input_data[{len(input_directions)}];", shader_code)
     shader_code = re.sub(r"\s*int output_data\[];", f"int output_data[{path_buffer_size}];", shader_code)
+
+    # append 0 to end of directions to prevent GLSL throwing out-of-bounds, despite not using the final ix.
+    pattern = r"(const int input_data\[\] = int\[\]\{)([\d,]+)(\};)"
+    def append_zero(match):
+        return f"{match.group(1)}{match.group(2)},0{match.group(3)}"
+    shader_code = re.sub(pattern, append_zero, shader_code)
 
     return f"""GL 4.5
 
