@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from CFG.CFGGenerator import GeneratorConfig
 from languages import Language, WASMLang
-from my_common import generate_program, save_program, load_repo_paths_config, log_execution_time
+from my_common.utils import generate_program, save_program, load_repo_paths_config, log_execution_time
 from my_common.CodeType import CodeType
 from CFG import CFGGenerator
 from my_test import tst_generated_code

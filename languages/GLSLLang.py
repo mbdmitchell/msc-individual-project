@@ -139,8 +139,7 @@ class GLSLLang(Language):
 
     # SWITCH
 
-    # TODO: below method needs better naming
-    @staticmethod
+    @staticmethod  # TODO: needs better name
     def switch_label(switch_label_: str = None) -> str:
         return "break;"
 

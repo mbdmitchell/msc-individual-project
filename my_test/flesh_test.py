@@ -26,7 +26,7 @@ def tst_generated_code(program,
     if isinstance(language, WASMLang):
         is_match, msg = WASM.run_wasm(program, input_directions)
     elif isinstance(language, WGSLLang):
-        code_filepath = os.path.join('/Users/maxmitchell/Documents/msc-control-flow-fleshing-project', program.get_file_path())  # TODO: address underlying issue w/ get_file_path()
+        code_filepath = os.path.join('/Users/maxmitchell/Documents/msc-control-flow-fleshing-project', program.get_file_path())
         expected_directions = program.cfg.expected_output_path(input_directions)
         try:
             is_match, msg = tst_shader(code_filepath, expected_directions, os.environ.copy(), input_directions)

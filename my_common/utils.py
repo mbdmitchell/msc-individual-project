@@ -5,6 +5,7 @@ import logging
 import os
 import time
 from functools import wraps
+import platform
 from typing import Optional
 
 
@@ -33,10 +34,16 @@ def log_execution_time(file_path=log_file):
 
 def load_repo_paths_config():
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, '..', 'config.json')
+    current_os = platform.system()
 
-    # Load the configuration data from config.json
+    if current_os == 'Linux':
+        # On lab machines you have to pip install after cloning repo so have to
+        # explicitly point to the config file, else it searches wrong place
+        config_path = '/homes/mbm22/Documents/modules/msc-project/msc-individual-project/config.json'
+    else:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(script_dir, '..', 'config.json')
+
     try:
         with open(config_path, 'r') as config_file:
             config = json.load(config_file)
