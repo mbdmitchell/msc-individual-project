@@ -70,7 +70,7 @@ class GLSLLang(Language):
 
     @staticmethod
     def directions_layout_binding():
-        return f"layout(std430, binding = 1) buffer directions {{\n\tint {GLSLLang().input_data_array_name}[];\n}}"
+        return f"layout(std430, binding = 1) buffer directions {{\n\tint {GLSLLang().input_data_array_name}[];\n}};"
 
     # FULL CODE
 
@@ -121,7 +121,7 @@ class GLSLLang(Language):
     @staticmethod
     def selection_str_pre_format(code_type: CodeType, block: int):
         return f"""
-                {GLSLLang().cntrl_assignment_str(code_type, block)};
+                {GLSLLang().cntrl_assignment_str(code_type, block)}
                 if ({Language.cntrl_val_var_name()} == 1) {{{{
                     {{true_block_code}}
                 }}}}
