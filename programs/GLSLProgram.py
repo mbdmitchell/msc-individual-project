@@ -25,10 +25,26 @@ def _list_to_space_separated_values(values: Optional[list[int]]) -> str:
 
 def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_directions=Optional[list[int]],
                               expected_path=list[int]) -> str:
-    def if_global(string: str):
-        return string if code_type == CodeType.GLOBAL_ARRAY else ''
 
-    # +1 so can detect if somehow actual_path starts identically to expected_path but has extra elems
+    # ------------------------------------------------------------------------------------------------------------------
+
+    # Append a bunch of null directions to the end of input_data/input_directions. The Intel Graphics Compiler throws an
+    # out-of-bounds error if there are *any* paths through the control flow that would result in an out-of-bounds error,
+    # not just the path dictated by input_directions. There is no significance to specifically adding 32 null directions
+    # to the input directions, except it removes all errors of this type when running the test harness with
+    # default parameters.
+
+    def append_negative_ones(match):
+        return f"{match.group(1)}{match.group(2).strip()}, {', '.join(['-1'] * 32)}{match.group(3)}"
+
+    if code_type is CodeType.GLOBAL_ARRAY:
+        input_directions.extend([-1] * 32)
+    elif code_type is CodeType.LOCAL_ARRAY:
+        pattern = r"(const\s+int\s+input_data\[\]\s*=\s*int\[\]\()\s*([\d\s,]*)\s*(\);)"
+        shader_code = re.sub(pattern, append_negative_ones, shader_code)
+
+    # ------------------------------------------------------------------------------------------------------------------
+
     path_buffer_size = len(expected_path) + 1
 
     path_buffer_size_in_bytes = path_buffer_size * 4  # 32-bit ints
@@ -49,24 +65,16 @@ def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_direc
         shader_code = re.sub(r"\s*int input_data\[];", f"int input_data[{len(input_directions)}];", shader_code)
     shader_code = re.sub(r"\s*int output_data\[];", f"int output_data[{path_buffer_size}];", shader_code)
 
-    # Append a bunch of null directions to the end of input_data. The Intel Graphics Compiler throws an out-of-bounds
-    # error if there are *any* paths through the control flow that would result in an out-of-bounds error, not just the
-    # path dictated by input_directions. There is no significance to specifically adding 32 null directions.
-    pattern = r"(const\s+int\s+input_data\[\]\s*=\s*int\[\]\()\s*([\d\s,]*)\s*(\);)"
-    def append_negative_ones(match):
-        return f"{match.group(1)}{match.group(2).strip()}, {', '.join(['-1'] * 32)}{match.group(3)}"
-    shader_code = re.sub(pattern, append_negative_ones, shader_code)
-
     return f"""GL 4.5
 
 CREATE_BUFFER actual_path SIZE_BYTES {path_buffer_size_in_bytes} INIT_VALUES
     int {buffer_full_of_zeros}
 
-{if_global(directions_array_buffer)}CREATE_BUFFER expected_path SIZE_BYTES {path_buffer_size_in_bytes} INIT_VALUES
+{code_type.if_global(directions_array_buffer)}CREATE_BUFFER expected_path SIZE_BYTES {path_buffer_size_in_bytes} INIT_VALUES
     int {expected_path_padded_with_zeros}
 
 BIND_SHADER_STORAGE_BUFFER BUFFER actual_path BINDING 0
-{if_global(directions_binding)}
+{code_type.if_global(directions_binding)}
 DECLARE_SHADER control_flow KIND COMPUTE
 
 {shader_code}
