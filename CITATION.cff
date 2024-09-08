@@ -1,0 +1,28 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: FleshTest
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Max Benjamin David
+    family-names: Mitchell
+    email: mbm22@ic.ac.uk
+    affiliation: 'Imperial College, London'
+repository-code: >-
+  https://github.com/mbdmitchell/msc-individual-project/tree/main
+abstract: >-
+  FleshTest is a compiler testing framework using control
+  flow fleshing: a technique to detect mis-compilation bugs
+  using control flow graphs (CFGs). FleshTest supports
+  WebAssembly, WebGPU Shading Language (WGSL), and OpenGL
+  Shading Language (GLSL) compilers. It is extensible,
+  allowing for the testing of any compiler whose source
+  language is a programming language with a backend.
+keywords:
+  - fuzzing
+  - compiler
+  - control flow
