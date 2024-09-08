@@ -140,16 +140,27 @@ def passes_tst_suite_all_non_visitable_mutants(env, is_reduced: bool) -> TestRes
 
 def main():
 
+    def random_index(lst):
+        return random.randint(0, len(lst) - 1)
+
     parser = argparse.ArgumentParser(description='For mutant tracking file creation [OPTIONAL].')
     parser.add_argument('--create-mutant-tracking-file', action='store_true', default=False, help='Create a mutant tracking file.')
     parser.add_argument('--reduced-test-suite', action='store_true', default=False, help='Run of the reduced test suite.')
     parser.add_argument('--seed', type=int, default=None, help='Seed for random number generator.')
+    parser.add_argument('--time-limit', type=int, default=None, help='Time limit in seconds')
 
     args = parser.parse_args()
 
+    start_time = time.time()
+
+    def is_time_limit_reached() -> bool:
+        if args.time_limit is None:
+            return False
+        return time.time() - start_time >= args.time_limit
+
+    # handle dawn variant
     if 'DAWN_VARIANT' not in os.environ:
         os.environ['DAWN_VARIANT'] = 'meta_mutant'
-
     assert os.environ['DAWN_VARIANT'] in ['normal', 'mutant_tracking', 'meta_mutant'], \
         f"Invalid DAWN_VARIANT value: {os.environ['DAWN_VARIANT']}"
 
@@ -162,22 +173,15 @@ def main():
     if args.seed is not None:
         random.seed(args.seed)
 
-    def random_index(lst):
-        return random.randint(0, len(lst) - 1)
-
     # --------
 
     env = os.environ.copy()
 
-    time_limit_in_seconds = 2 * 60 * 60  # 2 hours
-
     print("Running test suite: \n"
           f"\tDAWN_VARIANT: {env['DAWN_VARIANT']}\n"
           f"\tREDUCED_TEST_SUITE: {args.reduced_test_suite}\n"
-          f"\tRUNNING FOR: {time_limit_in_seconds//60} minutes\n"
           f"\tSEED: {args.seed}")
 
-    start_time = time.time()
     visitable_mutant_ids = get_visitable_mutant_ids()
 
     killed_mutants_compiler_crash = []
@@ -185,7 +189,7 @@ def main():
     killed_mutants_unknown_cause = []
     survived_mutants = []
 
-    while time.time() - start_time < time_limit_in_seconds and len(visitable_mutant_ids) > 0:
+    while not is_time_limit_reached() and len(visitable_mutant_ids) > 0:
         mutant_id = visitable_mutant_ids.pop(random_index(visitable_mutant_ids))
 
         print(f"Testing mutant {mutant_id}...")
@@ -202,10 +206,13 @@ def main():
             else:
                 killed_mutants_unknown_cause.append(mutant_id)
 
+    print(f"Time taken: {(time.time()-start_time)//60} minutes")
+
     print('survived_mutants:', survived_mutants)
     print('killed_mutants_compiler_crash:', killed_mutants_compiler_crash)
     print('killed_mutants_path_mismatch:', killed_mutants_path_mismatch)
     print('killed_mutants_unknown_cause:', killed_mutants_unknown_cause)
+
 
 
 if __name__ == '__main__':
