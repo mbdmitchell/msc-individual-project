@@ -25,7 +25,7 @@ class Program(ABC):
         except FileNotFoundError:
             return False
 
-    def set_file_path(self, filepath: str) -> str:
+    def set_file_path(self, filepath: str):
         self._file_path = filepath
 
     def get_file_path(self) -> str:

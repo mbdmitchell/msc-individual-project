@@ -52,12 +52,9 @@ def run_subprocess(command, output_path=None, redirect_output=False, verbose=Fal
                 with open(output_path, 'w') as output_file:
                     output_file.write(result.stdout)
 
-        #logging.debug(f"{command} succeeded.", result.stdout if not redirect_output else "")
-
         return True, result.stdout if not redirect_output else None
     except subprocess.CalledProcessError as e:
         if verbose:
-            #logging.debug(f"{command} failed:", e.stderr)
             logging.debug("Command that failed:", e.cmd)
             logging.debug("Return code:", e.returncode)
         return False, e.stderr

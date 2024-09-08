@@ -98,7 +98,7 @@ class CodeBuilder(ABC):
             return self.cfg.merge_block(block)
 
     def switch_code(self,
-                    block: Optional[int],  # TODO: rename to header, no???
+                    block: Optional[int],  # TODO: could rename to header
                     end_block: Optional[int],
                     merge_blocks: list[MergeBlockData],
                     switch_label_num: int,
@@ -118,7 +118,6 @@ class CodeBuilder(ABC):
                 assert not is_fallthrough
 
             end_block_ = self._calc_end_block_for_case(is_fallthrough, block, next_case)
-
 
             # is WASM
 
@@ -150,7 +149,7 @@ class CodeBuilder(ABC):
                     possible_switch_break=self.switch_break_str(current_case, is_fallthrough, switch_label_num))
 
         def add_cases(code_str: str = None) -> str:
-            # TODO: give better name. If WASM, add to code_str, else return case code
+            # If WASM, add to code_str, else return case code. TODO: think of better name.
             if not isinstance(self.langauge, WASMLang):
                 code_ = ''
                 for ix in range(len(cases)):
@@ -218,7 +217,7 @@ class CodeBuilder(ABC):
 
     def switch_break_str(self, target: int, is_fallthrough: bool, switch_num: Optional[int] = None):
         c1 = is_fallthrough  # leaves scope of current case block and fall into scope of next => no switch_break
-        c2 = self.cfg.is_exit_block(target)  # "(return)" added later => no switch_break
+        c2 = self.cfg.is_exit_block(target)  # "return" added later => no switch_break
         c3 = self.cfg.is_continue_block(target) or self.cfg.is_break_block(target)  # relevant. added later => no S.B.
         if c1 or c2 or c3:
             return ""
@@ -235,7 +234,6 @@ class CodeBuilder(ABC):
         if default == merge_blocks[-1].merge_block:
             nearest_loop_header = next((b.related_header for b in merge_blocks[-2::-1]
                                         if self.cfg.is_loop_header(b.related_header)), None)
-
             return nearest_loop_header
         else:
             return self.cfg.merge_block(block)
@@ -253,7 +251,7 @@ class CodeBuilder(ABC):
 
         closest_loop_header_enclosing_switch = None
 
-        for bk in merge_blocks[-2::-1]:  # Iterate from merge_blocks[-2] to mb[0] ([-1].header is always switch)
+        for bk in merge_blocks[-2::-1]:  # Iterate from merge_blocks[-2] to mb[0] (mb[-1].header is always switch)
             if self.cfg.is_loop_header(bk.related_header):
                 closest_loop_header_enclosing_switch = bk.related_header
                 break
@@ -324,7 +322,8 @@ class CodeBuilder(ABC):
             if is_break or is_cont:
                 code += self.language.break_code if is_break else self.language.continue_code
             else:
-                code += self.code_in_block_range(self._calc_dst_block(block), end_block, merge_blocks, next_case_block, switch_label_num)
+                code += self.code_in_block_range(self._calc_dst_block(block), end_block, merge_blocks,
+                                                 next_case_block, switch_label_num)
 
         else:  # is_selection_header
 

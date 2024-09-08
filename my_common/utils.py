@@ -15,6 +15,7 @@ def parse_int_list(string: str) -> list[int]:
 
 log_file = '../execution_times.txt'
 
+
 def log_execution_time(file_path=log_file):
     def decorator(func):
         @wraps(func)
@@ -32,8 +33,8 @@ def log_execution_time(file_path=log_file):
 
     return decorator
 
-def load_repo_paths_config():
 
+def load_repo_paths_config():
     current_os = platform.system()
 
     if current_os == 'Linux':
@@ -49,7 +50,7 @@ def load_repo_paths_config():
             config = json.load(config_file)
         logging.info("Configuration file loaded successfully.")
     except FileNotFoundError:
-        logging.info(f"Configuration file not found at {config_path}")
+        logging.error(f"Configuration file not found at {config_path}")
         config = {}
     except json.JSONDecodeError:
         logging.error(f"Error decoding JSON from the configuration file at {config_path}")
@@ -59,7 +60,6 @@ def load_repo_paths_config():
 
 
 def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_marker=';;', ) -> str:
-
     open_delim = deliminators[0]
     closed_delim = deliminators[1]
 
@@ -103,7 +103,6 @@ def format_code(code: str, add_line_above, deliminators=('{', '}'), comment_mark
 
 
 def generate_program(args, cfg, directions: list[int] = None):
-
     from programs.WASMProgram import WASMProgram
     from programs.GLSLProgram import GLSLProgram
     from programs.WGSLProgram import WGSLProgram

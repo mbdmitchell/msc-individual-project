@@ -24,5 +24,3 @@ from .example_CFGs import (
     cfg_switch_loop_if_combo,
     cfg_merge_which_is_also_header_1_selection,
     cfg_merge_which_is_also_header_2_loop)
-
-# from .alloy_to_cfg import alloy_to_cfg  # TODO: Remove after testing / not for final version

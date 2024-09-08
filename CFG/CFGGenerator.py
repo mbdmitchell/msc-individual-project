@@ -420,8 +420,8 @@ class CFGGenerator:
     # -----------------------------------------------------------------------------------------------------------------
 
     def _remove_all_self_loops(self):
-        """There is (was?) a rare bug that causes unintended self loops to be created. This fn removes them until
-        the root cause can be addressed"""
+        """There is a rare bug that causes unintended self loops to be created.
+        This fn removes them until the root cause can be addressed"""
         for n in self.get_cfg().nodes():
             while (n, n) in self.get_cfg().graph.edges(n):
                 self.get_cfg().remove_edge(n, n)
@@ -454,7 +454,8 @@ class CFGGenerator:
             visited = set()
 
             def is_sole_inblock_for_a_dst_block(block):  # dst block(s) all have multiple blocks pointing to it
-                return all(len(self.get_cfg().in_edges_nx_count(dst)) > 1 for dst in self.get_cfg().out_edges_destinations(block))
+                return all(len(self.get_cfg().in_edges_nx_count(dst_)) > 1
+                           for dst_ in self.get_cfg().out_edges_destinations(block))
 
             def out_dst_equals_loop_header(block):
                 """true iff out_degree = 1 and the dst = loop header"""

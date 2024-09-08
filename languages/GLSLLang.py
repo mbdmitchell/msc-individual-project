@@ -149,7 +149,7 @@ class GLSLLang(Language):
                         {case_code}
                         {possible_switch_break}
                     }}
-                    """
+                """
 
     @staticmethod
     def switch_default_str_pre_format() -> str:
@@ -166,8 +166,8 @@ class GLSLLang(Language):
                 switch ({GLSLLang.cntrl_val_var_name()}) {{{{
                         {{cases}}
                         {{default}}
-                    }}}}
-                    """
+                }}}}
+                """
 
     # LOOP
 
@@ -186,7 +186,7 @@ class GLSLLang(Language):
                             }}}}
                             {{loop_body}}
                         }}}}
-                        """
+                    """
 
         elif code_type.is_array_type():
             return f"""
@@ -198,7 +198,7 @@ class GLSLLang(Language):
                             }}}}
                             {{loop_body}}
                         }}}}
-                        """
+                    """
 
         else:
             raise ValueError("Invalid CodeType")

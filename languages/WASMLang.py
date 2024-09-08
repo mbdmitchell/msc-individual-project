@@ -12,15 +12,15 @@ class WASMLang(Language):
 
     @staticmethod
     def array_declaration_pre_format():
-        raise NotImplementedError("Static code option isn't available (yet) for WASM")
+        raise NotImplementedError("Local code isn't available for WASM")
 
     @staticmethod
     def add(*args: str):
-        raise NotImplementedError
+        raise NotImplementedError  # NB: not needed for project
 
     @staticmethod
     def multiply(*args: str):
-        raise NotImplementedError
+        raise NotImplementedError  # NB: not needed for project
 
     def __str__(self):
         return 'wasm'
@@ -161,7 +161,6 @@ class WASMLang(Language):
 
     @staticmethod
     def selection_str_pre_format(code_type: CodeType, block: int):
-
         return f"""
                 {WASMLang().cntrl_assignment_str(code_type, block)}
                 (if (i32.eq (local.get {WASMLang.cntrl_val_var_name()}) (i32.const 1))

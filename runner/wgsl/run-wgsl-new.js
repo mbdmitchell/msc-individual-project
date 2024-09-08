@@ -1,3 +1,5 @@
+// TODO: Move file out of wgsl and rename run_wgsl.js. NB: make sure to update in the other files
+
 const fs = require('fs');
 const config = require('../../config.json');
 

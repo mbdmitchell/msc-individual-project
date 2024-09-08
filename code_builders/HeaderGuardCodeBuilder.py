@@ -78,22 +78,20 @@ class HeaderGuardCodeBuilder(CodeBuilder):
     def _enclosing_loops_aux(self, block, end_block, loops_dict, merge_blocks, visited_blocks):
         """Helper function to recursively traverse blocks and calculate enclosing loops."""
 
-        # Visit block
         if not block or block == end_block or block in visited_blocks:
             return
         visited_blocks.add(block)
 
-        # Early exit
         if self.cfg.is_exit_block(block):
             return
 
-        # Add merge info for current block (if header) to dict.
+        # add merge info for current block (if header) to dict.
         self.handle_merge_blocks(block, merge_blocks)
         if self.cfg.is_header_block(block) or self.cfg.is_break_block(
                 block):  # useful to know the outer loop of break blocks
             loops_dict[block] = [m for m in merge_blocks if self.cfg.is_loop_header(m.related_header)]
 
-        # Call enclosing_loops_aux for block's descendants
+        # call enclosing_loops_aux for block's descendants
 
         if self.cfg.is_basic_block(block):
             self._process_basic_block(block, end_block, merge_blocks, loops_dict, visited_blocks)
@@ -265,22 +263,10 @@ class HeaderGuardCodeBuilder(CodeBuilder):
     def _flesh(self, code_skeleton: str) -> str:
 
         def correct_ix_val(block):
-
             if len(self.enclosing_loops_exclusive[block]) == 0:
                 return self.language.loop_ix_name(block)
-
             enclosing_loop = self.enclosing_loops_exclusive[block][-1].related_header
-
-
-
-            # if len(self.enclosing_loops_exclusive[block]) == 0:
-            #     return str(self.fleshing_info[block].cntrl_vals[0])
-            #
-            # enclosing_loop = self.enclosing_loops_exclusive[block][-1].related_header
-            # enclosing_loop_ix_name = self.language.loop_ix_name(enclosing_loop)
-            #
-            # if len(self.enclosing_loops_exclusive[block]) == 0:
-            #     return str(self.fleshing_info[block].cntrl_vals[0])
+            # TODO: implement
 
         def intended_str_for_placeholder(match) -> str:
             """Return the correct number or 'arr[ix]' string for a given placeholder"""

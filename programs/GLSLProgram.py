@@ -57,7 +57,7 @@ def _generate_shader_test_aux(shader_code: str, code_type: CodeType, input_direc
 
     expected_path_padded_with_zeros = _list_to_space_separated_values(
         expected_path[:path_buffer_size] + [0] * (path_buffer_size - len(expected_path))
-        # TODO: Figure how remove incorrect warning
+        # TODO: remove incorrect PyCharm warning
     )
 
     # TODO: find way to incorporate into the initial shader code construction, rather than at this stage.

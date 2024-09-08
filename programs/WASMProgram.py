@@ -71,7 +71,8 @@ class WASMProgram(Program):
         self.save("./temppath", save_as_executable=True)
 
         # Run wasm-opt command
-        subprocess.run(["wasm-opt", "--enable-multimemory", "./temppath.wasm", f"-{opt_level}", "-o", "temppath.wasm"], check=True)
+        subprocess.run(["wasm-opt", "--enable-multimemory", "./temppath.wasm", f"-{opt_level}", "-o",
+                        "temppath.wasm"], check=True)
 
         if store_at_filepath:
             shutil.copy("./temppath.wasm", store_at_filepath)
@@ -82,5 +83,3 @@ class WASMProgram(Program):
                 content = f.read()
             os.remove("./temppath.wasm")
             return content
-
-

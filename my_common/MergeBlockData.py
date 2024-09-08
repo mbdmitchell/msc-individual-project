@@ -1,4 +1,5 @@
-# TODO: Small task: Refactor to access members through getters for better encapsulation. Use @property decorator for getters
+# TODO: Small task: Refactor to access members through getters for better encapsulation.
+#  Use @property decorator for getters
 
 class MergeBlockData:
     """When traversing the CFG to build the code, a DS containing MergeBlockData is passed, so that each block knows

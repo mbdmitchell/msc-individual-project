@@ -133,9 +133,10 @@ class WGSLLang(Language):
     @staticmethod
     def else_str_pre_format() -> str:
         return """
-                        else {{
-                            {false_block}
-                        }}"""
+                else {{
+                    {false_block}
+                }}
+                """
 
     # SWITCH
 
@@ -146,18 +147,18 @@ class WGSLLang(Language):
     @staticmethod
     def switch_case_str_pre_format() -> str:
         return """
-                        case {ix}: {{
-                            {case_code}
-                        }}
-                        """
+                case {ix}: {{
+                    {case_code}
+                }}
+                """
 
     @staticmethod
     def switch_default_str_pre_format() -> str:
         return """
-                        default: {{
-                            {default_code}
-                        }}
-                        """
+                default: {{
+                    {default_code}
+                }}
+                """
 
     @staticmethod
     def switch_full_str_pre_format(code_type: CodeType, block: int) -> str:
@@ -178,7 +179,7 @@ class WGSLLang(Language):
             Due to WGSL's syntax and the representation of CFG blocks in the generated code,
             a `loop` construct with manual control flow checks is used to handle the loop
             header and body.
-            """
+        """
 
         if code_type == CodeType.HEADER_GUARD:
             i: str = WGSLLang.loop_ix_name(block)
@@ -196,21 +197,21 @@ class WGSLLang(Language):
 
         elif code_type.is_array_type():
             return f"""
-                            {WGSLLang().cntrl_assignment_str(code_type, block)}
-                            loop {{{{
-                                {{loop_header}}
-                                if {Language.cntrl_val_var_name()} != 1 {{{{
-                                    break;
-                                }}}}
-                                {{loop_body}}
-                                continuing {{{{
-                                    if {Language.cntrl_val_var_name()} != -1 {{{{
-                                        {WGSLLang.set_and_increment_control()}
-                                    }}}}
-                                    break if {Language.cntrl_val_var_name()} == -1; // way to break out of a loop while in a switch (`break` in a switch just leaves switch)
-                                }}}}
+                        {WGSLLang().cntrl_assignment_str(code_type, block)}
+                        loop {{{{
+                            {{loop_header}}
+                            if {Language.cntrl_val_var_name()} != 1 {{{{
+                                break;
                             }}}}
-                            """
+                            {{loop_body}}
+                            continuing {{{{
+                                if {Language.cntrl_val_var_name()} != -1 {{{{
+                                    {WGSLLang.set_and_increment_control()}
+                                }}}}
+                                break if {Language.cntrl_val_var_name()} == -1; // way to break out of a loop while in a switch (`break` in a switch just leaves switch)
+                            }}}}
+                        }}}}
+                    """
         else:
             raise ValueError("Invalid CodeType")
 

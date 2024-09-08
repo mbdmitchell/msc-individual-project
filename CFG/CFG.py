@@ -19,10 +19,8 @@ class CFGFormat(Enum):
     NX_MULTI_DIGRAPH = 1,
     GRAPH_ML = 2
     PNG = 3
-    ALLOY = 4
 
-# TODO: Remove old multi-edge functionality
-# TODO: refactor to use DiGraph, a better fit
+# MINOR TODO: refactor to use DiGraph internally, a better fit
 
 class CFG:
     """
@@ -79,10 +77,8 @@ class CFG:
     def _save_image(cfg, filename: str):
         with save_lock:
             plt.figure(figsize=(10, 10))
-            # pos = nx.nx_agraph.graphviz_layout(cfg.graph, prog="twopi", root=1)
             pos = nx.spring_layout(cfg.graph)  # or any other layout algorithm
             nx.draw(cfg.graph, pos, with_labels=True, font_color='white')
-
             plt.axis('off')
             plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0.1)
             plt.close()
@@ -110,16 +106,12 @@ class CFG:
     def load(self, filepath: str, fmt: CFGFormat = CFGFormat.CFG, load_as_wasm_friendly_cfg: bool = True) -> 'CFG':
         """Loads a graph from a file in the specified format."""
 
-        from CFG.alloy_to_cfg import alloy_to_cfg
-
         if fmt not in {CFGFormat.NX_MULTI_DIGRAPH, CFGFormat.CFG, CFGFormat.ALLOY}:
             raise TypeError("Unsupported CFGFormat")
 
         if fmt == CFGFormat.GRAPH_ML:
             self.graph = nx.read_graphml(filepath)
             return self
-        elif fmt == CFGFormat.ALLOY:
-            cfg = alloy_to_cfg(filepath, load_as_wasm_friendly_cfg)
         else:
             with open(filepath, 'rb') as file:
                 cfg = pickle.load(file)
@@ -200,12 +192,10 @@ class CFG:
         return attrs
 
     def add_node_attribute(self, node, attr_label: str, value: bool | int):
-        # TODO: if attr not in {, , , , , ,} throw
         if node not in self.graph.nodes:
             raise RuntimeError(f"Node {node} does not exist in the graph")
         if attr_label in self.graph.nodes[node]:
             raise RuntimeError(f"{attr_label} already in CFG node")
-        # TODO: If attr_label == Break & cont == TRUE in node, throw and vice versa
 
         self.graph.nodes[node][attr_label] = value
 
@@ -220,7 +210,6 @@ class CFG:
         del self.graph.nodes[node][attr_label]
 
     def _add_edge_attribute(self, edge, attr_label: str, value: bool | int):
-        # TODO: if attr not in {, , , , , ,} throw
         if edge not in self.graph.edges:
             raise RuntimeError(f"Edge {edge} does not exist in the graph")
         if attr_label in self.graph.edges[edge]:
@@ -231,7 +220,6 @@ class CFG:
         self.graph.edges[edge][attr_label] = value
 
     def update_node_attribute(self, node, attr_label: str, value: bool | int):
-        # TODO: if attr not in {, , , , , ,} throw
         if node not in self.graph.nodes:
             raise RuntimeError(f"Node {node} does not exist in the graph")
         if attr_label not in self.graph.nodes[node]:
@@ -240,7 +228,6 @@ class CFG:
         self.graph.nodes[node][attr_label] = value
 
     def update_edge_attribute(self, edge, attr_label: str, value: bool | int):
-        # TODO: if attr not in {, , , , , ,} throw
         if edge not in self.graph.edges:
             raise RuntimeError(f"Edge {edge} does not exist in the graph")
         if attr_label not in self.graph.edges[edge]:
@@ -377,11 +364,11 @@ class CFG:
         raise IndexError("Index out of range")
 
     def generate_valid_input_directions(self, seed: int = None, max_length: int = 64) -> list[int]:
+
         # TODO: add param to return n distinct valid_input_directions as list[list[int]]
         if seed is None:
             seed = random.randint(0, 2 ** 32 - 1)
         random.seed(seed)
-
 
         MAX_ATTEMPTS = 16
 
@@ -413,7 +400,7 @@ class CFG:
             else:
                 continue
 
-        # TODO: ATTEMPTS is silly. If we are not at exit node by max_length, just find and follow shortest path to exit
+        # TODO: replace ATTEMPTS with if we are not at exit node by max_length, find and follow shortest path to exit
 
         raise RuntimeError(f'Failed to generate input directions of max length {max_length}. '
                            'Check CFG end nodes are always reachable or increase max_length parameter')
